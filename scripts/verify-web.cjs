@@ -240,6 +240,61 @@ fs.mkdirSync(out, { recursive: true });
     checks.push(
       "Expired seeded history and linked records are pruned before display",
     );
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(base + "/chat");
+    const sidebar = page.getByTestId("desktop-navigation");
+    await sidebar.waitFor();
+    await page
+      .getByLabel("Message Zen", { exact: true })
+      .fill("A draft while resizing.");
+    await page.setViewportSize({ width: 899, height: 900 });
+    await sidebar.waitFor({ state: "hidden" });
+    assert.equal(
+      await page.getByLabel("Message Zen", { exact: true }).inputValue(),
+      "A draft while resizing.",
+    );
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await sidebar.waitFor();
+    assert.equal(
+      await page.getByLabel("Message Zen", { exact: true }).inputValue(),
+      "A draft while resizing.",
+    );
+    await sidebar.getByRole("button", { name: "For you", exact: true }).click();
+    await b("All for you").waitFor();
+    const resources = page.getByRole("button", { name: /^Explore / });
+    const firstCard = await resources.nth(0).boundingBox();
+    const secondCard = await resources.nth(1).boundingBox();
+    assert.ok(
+      firstCard &&
+        secondCard &&
+        Math.abs(firstCard.y - secondCard.y) < 2 &&
+        secondCard.x > firstCard.x + firstCard.width,
+      "Desktop recommendations must use two columns",
+    );
+    await page.screenshot({
+      path: path.join(out, "desktop-recommendations.png"),
+    });
+    await resources.first().click();
+    const desktopDialog = page.getByRole("dialog");
+    await desktopDialog.waitFor();
+    await page.keyboard.press("Tab");
+    assert.equal(
+      await desktopDialog.evaluate((el) => el.contains(document.activeElement)),
+      true,
+    );
+    await page.keyboard.press("Escape");
+    await desktopDialog.waitFor({ state: "hidden" });
+    await sidebar
+      .getByRole("button", { name: "Talk with Zen", exact: true })
+      .click();
+    await page.getByLabel("Message Zen", { exact: true }).waitFor();
+    await page.screenshot({ path: path.join(out, "desktop-chat.png") });
+    await page.goto(base);
+    await b("Create account").waitFor();
+    await page.screenshot({ path: path.join(out, "desktop-welcome.png") });
+    checks.push(
+      "Desktop sidebar navigation, two-column resources, dialogs and resize draft preservation work",
+    );
     const routes = [
       "/",
       "/chat",
@@ -262,13 +317,23 @@ fs.mkdirSync(out, { recursive: true });
         .getByRole("dialog")
         .getByRole("button", { name: "Cancel", exact: true })
         .click();
-      for (const width of [320, 390, 430, 1440]) {
+      for (const width of [
+        320, 390, 430, 768, 899, 900, 1024, 1100, 1440, 1920,
+      ]) {
         await page.setViewportSize({ width, height: 844 });
         for (const route of routes) {
           await page.goto(base + route);
           await b("Explore").waitFor();
           await page.waitForFunction(
             () => !document.body.innerText.includes("Opening your space"),
+          );
+          const hasSidebar = await page
+            .getByTestId("desktop-navigation")
+            .count();
+          assert.equal(
+            hasSidebar,
+            width >= 900 && route !== "/" ? 1 : 0,
+            `Sidebar breakpoint: ${route}, ${width}`,
           );
           const overflow = await page.evaluate(
             () => document.documentElement.scrollWidth > innerWidth + 1,
@@ -282,7 +347,7 @@ fs.mkdirSync(out, { recursive: true });
       }
     }
     checks.push(
-      "64 route/viewport/text-size combinations render without horizontal page overflow",
+      "160 route/viewport/text-size combinations render with the correct navigation and no horizontal page overflow",
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(base + "/voice");

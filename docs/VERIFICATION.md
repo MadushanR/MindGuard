@@ -13,7 +13,9 @@ Madushan's eight screens and the shared foundation were verified locally. Zain a
 
 ## Browser verification
 
-The running Expo web preview passed 64 combinations: all eight screens at widths of 320, 390, 430, and 1440 pixels, with normal and larger text.
+The running Expo web preview passed 160 combinations: all eight screens at widths of 320, 390, 430, 768, 899, 900, 1024, 1100, 1440, and 1920 pixels, with normal and larger text. The checks verify the desktop sidebar breakpoint and absence of horizontal page overflow.
+
+Desktop verification also covers two-column recommendation cards, sidebar navigation, dialog keyboard containment and Escape dismissal, and preserving a text draft when crossing the desktop breakpoint. Welcome uses a split layout; reading pages keep a bounded width. The Android emulator was checked after the responsive changes: chat still shows its mobile header, composer, and bottom navigation without the desktop sidebar.
 
 The interaction checks passed for history opt-in, restart persistence, remembered details, selective linked deletion, temporary text/voice switching and cleanup, mock failure/retry without duplicate messages, voice reconnection/mute/stop, recommendation filtering and details, dialog keyboard containment and Escape dismissal, and expired fixture records.
 

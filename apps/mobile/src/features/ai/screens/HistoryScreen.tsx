@@ -15,7 +15,9 @@ import {
 } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { styles } from "../../../shared/theme";
+import { ResponsiveGrid, useBrowserLayout } from "../../../shared/responsive";
 export function HistoryScreen() {
+  const { desktop } = useBrowserLayout();
   const ai = useAI(),
     copy = screenCopy.history,
     [deleting, setDeleting] = useState<string[] | null>(null),
@@ -27,9 +29,9 @@ export function HistoryScreen() {
     setDeleting(ids);
   };
   return (
-    <Page>
+    <Page wide>
       <Intro {...copy} />
-      <View style={styles.stack}>
+      <View style={[styles.stack, desktop && { flexDirection: "row" }]}>
         <Button
           label="New conversation"
           kind="primary"
@@ -59,31 +61,33 @@ export function HistoryScreen() {
       {ai.model.saved.conversations.length ? (
         <>
           <Copy kind="heading">Saved conversations</Copy>
-          {[...ai.model.saved.conversations]
-            .sort((a, b) => b.updatedAt - a.updatedAt)
-            .map((c) => (
-              <Card key={c.id}>
-                <Copy kind="eyebrow">
-                  {new Date(c.createdAt).toLocaleDateString("en-CA")} ·{" "}
-                  {c.messages.length} messages
-                </Copy>
-                <Copy kind="heading">{c.title}</Copy>
-                <Copy kind="muted">{c.messages.at(-1)?.text}</Copy>
-                <Button
-                  label={`Continue: ${c.title}`}
-                  kind="text"
-                  onPress={() => {
-                    ai.openConversation(c.id);
-                    router.push(route(6));
-                  }}
-                />
-                <Button
-                  label="Delete conversation"
-                  kind="danger"
-                  onPress={() => requestDelete([c.id])}
-                />
-              </Card>
-            ))}
+          <ResponsiveGrid>
+            {[...ai.model.saved.conversations]
+              .sort((a, b) => b.updatedAt - a.updatedAt)
+              .map((c) => (
+                <Card key={c.id}>
+                  <Copy kind="eyebrow">
+                    {new Date(c.createdAt).toLocaleDateString("en-CA")} ·{" "}
+                    {c.messages.length} messages
+                  </Copy>
+                  <Copy kind="heading">{c.title}</Copy>
+                  <Copy kind="muted">{c.messages.at(-1)?.text}</Copy>
+                  <Button
+                    label={`Continue: ${c.title}`}
+                    kind="text"
+                    onPress={() => {
+                      ai.openConversation(c.id);
+                      router.push(route(6));
+                    }}
+                  />
+                  <Button
+                    label="Delete conversation"
+                    kind="danger"
+                    onPress={() => requestDelete([c.id])}
+                  />
+                </Card>
+              ))}
+          </ResponsiveGrid>
           <Button
             label="Delete all conversations"
             kind="danger"

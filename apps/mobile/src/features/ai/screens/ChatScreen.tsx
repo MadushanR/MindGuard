@@ -15,7 +15,9 @@ import {
 } from "../../../shared/ui";
 import { colors, styles } from "../../../shared/theme";
 import { route } from "../../../shared/navigation";
+import { useBrowserLayout } from "../../../shared/responsive";
 export function ChatScreen() {
+  const { desktop } = useBrowserLayout();
   const ai = useAI(),
     [draft, setDraft] = useState(""),
     [remembering, setRemembering] = useState(false),
@@ -29,7 +31,17 @@ export function ChatScreen() {
     setDraft("");
   };
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={[
+        { flex: 1 },
+        desktop && {
+          width: "100%",
+          maxWidth: 900,
+          alignSelf: "center",
+          paddingTop: 28,
+        },
+      ]}
+    >
       <View style={{ paddingHorizontal: 26, paddingBottom: 12, gap: 6 }}>
         <View style={styles.spread}>
           <View
