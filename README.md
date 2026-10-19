@@ -1,57 +1,101 @@
 # MindGuard
 
-React Native / TypeScript frontend for the MindGuard capstone. This delivery implements Madushan's eight screens, a shared native design system, editable JSON simulations, and placeholders for Zain and Munsif's screens.
+MindGuard is a wellness application for everyday reflection, understanding emotional patterns, and finding small steps toward better wellbeing. Its conversational companion, **Zen**, provides a space to talk through thoughts and feelings, with controls over what is remembered and saved.
 
-## Run locally
+The project brings together conversations, wellness insights, and privacy controls in a shared mobile and web experience. It is a non-clinical academic prototype.
 
-Use Node.js 24 LTS and npm. From the repository root:
+## Features
+
+- **Conversations with Zen:** text chat and a simulated voice conversation interface.
+- **Personalized recommendations:** illustrative videos and guides associated with recent emotion observations.
+- **Emotion feedback:** optional, uncertain estimates that can be confirmed, corrected, or dismissed.
+- **Conversation history:** optional local saving, conversation reopening, and individual or bulk deletion.
+- **Temporary conversations:** sessions that stay in memory and clear when leaving the conversation screens.
+- **Remembered details:** explicitly entered information that can be reviewed and removed.
+- **Privacy preferences:** separate consent controls, optional voice transcripts, and configurable retention.
+- **Responsive presentation:** a desktop browser workspace and mobile layouts for smaller screens and Android.
+
+## Current status
+
+The repository currently contains a frontend prototype powered by editable JSON simulations. Conversation replies, voice states, observations, recommendations, and sample records use synthetic data. Voice does not capture audio or request microphone access.
+
+Account access, wellness dashboards, wearable connections, trusted contacts, and sharing destinations are registered as placeholders for future implementation. Live AI, backend authentication, wearable integrations, and real sharing are not connected.
+
+Saved information stays on the local device using AsyncStorage. History, voice transcripts, and tone feedback start off; enabling history requires choosing a retention option. Storage is unencrypted, so use invented information when exploring the prototype. Automatic expiry runs while the application operates, including on launch and return to the foreground.
+
+## Technology
+
+- React Native and TypeScript
+- Expo development builds and Expo Router
+- React Native Web for browser support
+- Native StyleSheet components and Context/reducers
+- AsyncStorage for local persistence
+- JSON fixtures with schemas and validation
+- Jest and React Native Testing Library
+
+## Getting started
+
+Use Node.js 24 and npm. From the repository root:
 
 ```sh
 npm ci
 npm run web
 ```
 
-Open `http://localhost:8081`. Select **Explore** in the header to open any screen or load a JSON scenario. Explore is available only in development. Welcome remains the normal launch screen; authentication pages are team placeholders.
+Open **http://localhost:8081**. In development, **Explore** opens the screen and demo-scenario picker. Loading a scenario asks for confirmation before replacing local demo records; ordinary reloads preserve saved history.
 
-Web uses the available browser width. At 900 pixels and above, app screens show a desktop sidebar; recommendations, history, and remembered details use two columns from 1100 pixels. Android and iOS retain the mobile layout. Resizing the browser preserves the current conversation and draft.
+To build and run Android with a configured SDK, JDK 17, and a running emulator:
 
 ```sh
 npm run android
 ```
 
-Android requires the tooling described in [Android setup](docs/ANDROID-SETUP.md). The runner supports a private `android.local.json` or environment variables, so machine paths never enter committed configuration.
-
-## Edit simulated outputs
-
-Edit the eight JSON files in [packages/fixtures](packages/fixtures). Change chat replies, voice transcripts and timings, resource cards, sample history, memories, observations, and screen text without editing screen code.
+If the browser development server is already running, use a second terminal:
 
 ```sh
-npm run validate:fixtures
+node scripts/android.mjs --no-bundler
 ```
 
-Reload the app after editing. To replace saved sample records, choose **Explore → a scenario → Load scenario**. This action asks for confirmation and replaces local demo data. Ordinary reloads preserve opted-in saved history.
+See [Android setup](docs/ANDROID-SETUP.md) for native toolchain requirements.
 
-See the [JSON editing guide](docs/JSON-EDITING.md) for examples and the [team integration guide](docs/TEAM-INTEGRATION.md) for screen ownership and module boundaries.
+For an iPhone preview using Expo Go, install a version supporting SDK 58, connect the phone and computer to the same Wi-Fi, and run:
 
-The [verification notes](docs/VERIFICATION.md) record the browser and Android results, reproduction steps, and current limitations.
+```sh
+cd apps/mobile
+npx expo login
+npx expo start --go --lan
+```
 
-## Checks
+Sign into Expo Go with the same Expo account and scan the QR code. Current dependencies appear compatible, but iPhone testing and native iOS build validation are still pending. See [Expo's device instructions](https://docs.expo.dev/get-started/start-developing/).
+
+Run the following repository commands from the root; use `cd ../..` to return there from `apps/mobile`.
+
+## Repository structure
+
+```text
+apps/mobile/          Expo application, routes, feature modules, and shared UI
+packages/contracts/  Shared TypeScript models and interfaces
+packages/fixtures/   Editable simulation data, schemas, and validation
+docs/                Design, setup, and development documentation
+scripts/             Local build and verification tools
+```
+
+## Development and verification
 
 ```sh
 npm run check
 npm run export:web -w @mindguard/mobile
 ```
 
-For browser verification, leave `npm run web` running, install a Playwright browser once with `npx playwright install chromium`, and run:
+The checks cover fixture validation, TypeScript, lint, and tests. The export command generates the browser bundle.
 
-```sh
-node scripts/verify-web.cjs
-```
+Simulation content can be changed independently of screen code. See the [JSON editing guide](docs/JSON-EDITING.md) for replies, transcripts, resources, sample records, and scenarios.
 
-Alternatively set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing compatible Chromium executable. Screenshots and the machine-readable report are written to the ignored `artifacts` directory.
+Additional references:
 
-## Prototype boundaries
+- [Design guide](docs/design/DESIGN-GUIDE.md)
+- [Verification details and limitations](docs/VERIFICATION.md)
 
-Chat, voice, tone estimates, and recommendations are local simulations. There is no AI service, audio capture, account authentication, cloud deployment, watch integration, or actual sharing. The native app blocks microphone permission.
+## License
 
-History, voice transcripts, and tone feedback start off. History requires an explicit retention choice. Temporary conversations never write history, observations, or memories. AsyncStorage is unencrypted; use invented scenario details only. iOS-compatible source is included; iOS build/device validation is deferred.
+See [LICENSE](LICENSE) for the project license.
