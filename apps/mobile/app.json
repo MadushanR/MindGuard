@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "scheme": "mindguard",
+    "plugins": ["expo-router"],
+    "userInterfaceStyle": "light",
+    "slug": "mindguard",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mindguard.capstone"
+    },
+    "name": "MindGuard",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.mindguard.capstone",
+      "softwareKeyboardLayoutMode": "resize",
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+    },
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "web": {
+      "name": "MindGuard",
+      "output": "single"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "./schemas/emotions.schema.json",
+  "records": [
+    {
+      "id": "sample-tense",
+      "conversationId": "sample-chat",
+      "ageDays": 2,
+      "source": "Chat",
+      "predictedLabel": "Tense",
+      "confidence": 0.62,
+      "status": "Estimated",
+      "dismissed": false
+    },
+    {
+      "id": "sample-calm",
+      "ageDays": 1,
+      "source": "Chat",
+      "predictedLabel": "Calm",
+      "correctedLabel": "Hopeful",
+      "confidence": 0.57,
+      "status": "Corrected",
+      "dismissed": false
+    },
+    {
+      "id": "sample-low",
+      "ageDays": 3,
+      "source": "Voice tone",
+      "predictedLabel": "Low",
+      "confidence": 0.55,
+      "status": "Confirmed",
+      "dismissed": false
+    },
+    {
+      "id": "expired-emotion",
+      "conversationId": "expired-chat",
+      "ageDays": 10,
+      "source": "Chat",
+      "predictedLabel": "Hopeful",
+      "confidence": 0.6,
+      "status": "Estimated",
+      "dismissed": false
+    }
+  ]
+}

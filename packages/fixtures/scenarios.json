@@ -1,0 +1,221 @@
+{
+  "$schema": "./schemas/scenarios.schema.json",
+  "defaultScenarioId": "normal",
+  "defaults": {
+    "preferences": {
+      "saveHistory": false,
+      "retentionDays": null,
+      "saveVoiceTranscripts": false,
+      "reducedMotion": false,
+      "largerText": false
+    },
+    "consent": {
+      "voice": false,
+      "tone": false,
+      "chatObservations": true
+    }
+  },
+  "scenarios": [
+    {
+      "id": "normal",
+      "name": "Normal",
+      "description": "A fresh conversation with editable replies.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "normal",
+      "initialChatState": "idle",
+      "preferences": {
+        "saveHistory": false,
+        "retentionDays": null,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [],
+      "observationIds": [],
+      "memoryIds": []
+    },
+    {
+      "id": "empty",
+      "name": "Empty",
+      "description": "No history, memories, or observations.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "normal",
+      "initialChatState": "idle",
+      "preferences": {
+        "saveHistory": false,
+        "retentionDays": null,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [],
+      "observationIds": [],
+      "memoryIds": []
+    },
+    {
+      "id": "processing",
+      "name": "Processing",
+      "description": "Preview a pending reply.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "normal",
+      "initialChatState": "processing",
+      "preferences": {
+        "saveHistory": false,
+        "retentionDays": null,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [],
+      "observationIds": [],
+      "memoryIds": []
+    },
+    {
+      "id": "failure",
+      "name": "Failure and retry",
+      "description": "The first response fails; retry succeeds.",
+      "chatScriptId": "failure",
+      "voiceScriptId": "normal",
+      "initialChatState": "error",
+      "preferences": {
+        "saveHistory": false,
+        "retentionDays": null,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [],
+      "observationIds": [],
+      "memoryIds": []
+    },
+    {
+      "id": "reconnecting",
+      "name": "Reconnecting",
+      "description": "Voice pauses until you explicitly reconnect.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "reconnecting",
+      "initialChatState": "idle",
+      "preferences": {
+        "saveHistory": false,
+        "retentionDays": null,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [],
+      "observationIds": [],
+      "memoryIds": []
+    },
+    {
+      "id": "voice-error",
+      "name": "Voice error",
+      "description": "Preview voice failure and text fallback.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "error",
+      "initialChatState": "idle",
+      "preferences": {
+        "saveHistory": false,
+        "retentionDays": null,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [],
+      "observationIds": [],
+      "memoryIds": []
+    },
+    {
+      "id": "sample-history",
+      "name": "Sample saved records",
+      "description": "Load synthetic history, observations, and memories.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "normal",
+      "initialChatState": "idle",
+      "preferences": {
+        "saveHistory": true,
+        "retentionDays": 30,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [
+        "sample-chat"
+      ],
+      "observationIds": [
+        "sample-tense",
+        "sample-calm",
+        "sample-low"
+      ],
+      "memoryIds": [
+        "sample-memory"
+      ]
+    },
+    {
+      "id": "expired-history",
+      "name": "Expired history",
+      "description": "A 10-day-old record is removed by the 7-day policy.",
+      "chatScriptId": "normal",
+      "voiceScriptId": "normal",
+      "initialChatState": "idle",
+      "preferences": {
+        "saveHistory": true,
+        "retentionDays": 7,
+        "saveVoiceTranscripts": false,
+        "reducedMotion": false,
+        "largerText": false
+      },
+      "consent": {
+        "voice": false,
+        "tone": false,
+        "chatObservations": true
+      },
+      "conversationIds": [
+        "sample-chat",
+        "expired-chat"
+      ],
+      "observationIds": [
+        "sample-tense",
+        "expired-emotion"
+      ],
+      "memoryIds": [
+        "sample-memory",
+        "expired-memory"
+      ]
+    }
+  ]
+}

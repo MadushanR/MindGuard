@@ -1,0 +1,17 @@
+{
+  "$schema": "./schemas/remembered-details.schema.json",
+  "records": [
+    {
+      "id": "sample-memory",
+      "conversationId": "sample-chat",
+      "ageDays": 2,
+      "text": "I prefer short, practical suggestions."
+    },
+    {
+      "id": "expired-memory",
+      "conversationId": "expired-chat",
+      "ageDays": 10,
+      "text": "One step at a time works for me."
+    }
+  ]
+}

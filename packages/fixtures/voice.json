@@ -1,0 +1,85 @@
+{
+  "$schema": "./schemas/voice.schema.json",
+  "statusText": {
+    "ready": "Ready when you are.",
+    "listening": "I am listening.",
+    "processing": "A moment to reflect.",
+    "speaking": "Let us take it slowly.",
+    "muted": "Take your time.",
+    "reconnecting": "Let us reconnect.",
+    "stopped": "Your conversation has stopped.",
+    "error": "Voice is unavailable."
+  },
+  "scripts": [
+    {
+      "id": "normal",
+      "name": "A moment with Zen",
+      "steps": [
+        {
+          "state": "listening",
+          "durationMs": 3500
+        },
+        {
+          "state": "processing",
+          "durationMs": 1100
+        },
+        {
+          "state": "speaking",
+          "durationMs": 4800,
+          "transcript": {
+            "user": "I would like a moment to slow down.",
+            "assistant": "Let us take a quiet pause. What is one small thing you can set aside?"
+          },
+          "observation": {
+            "label": "Calm",
+            "confidence": 0.61
+          }
+        }
+      ]
+    },
+    {
+      "id": "reconnecting",
+      "name": "Interrupted connection",
+      "steps": [
+        {
+          "state": "listening",
+          "durationMs": 1500
+        },
+        {
+          "state": "reconnecting",
+          "durationMs": 0
+        },
+        {
+          "state": "listening",
+          "durationMs": 1800
+        },
+        {
+          "state": "processing",
+          "durationMs": 900
+        },
+        {
+          "state": "speaking",
+          "durationMs": 3000,
+          "transcript": {
+            "user": "Can we continue?",
+            "assistant": "Yes. We can continue at your pace."
+          }
+        }
+      ]
+    },
+    {
+      "id": "error",
+      "name": "Voice error",
+      "steps": [
+        {
+          "state": "listening",
+          "durationMs": 1200
+        },
+        {
+          "state": "error",
+          "durationMs": 0
+        }
+      ]
+    }
+  ]
+}

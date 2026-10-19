@@ -1,0 +1,65 @@
+{
+  "$schema": "./schemas/screen-copy.schema.json",
+  "welcome": {
+    "eyebrow": "A LITTLE SPACE FOR YOU",
+    "title": "However today feels,\nstart where you are.",
+    "description": "Meet Zen. A gentle companion for reflection, everyday wellbeing, and small steps forward.",
+    "note": "MindGuard is a non-clinical academic wellness prototype. Use invented details only."
+  },
+  "chat": {
+    "title": "Talk with Zen",
+    "subtitle": "Your wellness companion",
+    "placeholder": "What is on your mind?",
+    "processing": "Zen is thinking…",
+    "error": "Your message could not be processed. Your words are still here. Try again when you are ready.",
+    "empty": "NEED A PLACE TO START?"
+  },
+  "voice": {
+    "eyebrow": "A MOMENT WITH ZEN",
+    "title": "A moment to talk.",
+    "description": "Start when you are ready. There is no rush.",
+    "simulation": "Voice simulation · no microphone or audio capture"
+  },
+  "tone": {
+    "eyebrow": "YOUR PERSPECTIVE FIRST",
+    "title": "A little insight.\nYour perspective first.",
+    "description": "Voice tone feedback offers an uncertain estimate of how you may sound.",
+    "note": "Observations can be wrong. They are not a diagnosis and never determine alerts."
+  },
+  "recommendations": {
+    "eyebrow": "A LITTLE SUPPORT, CHOSEN FOR YOU",
+    "title": "For your kind of week.",
+    "description": "A moment to watch, read, or simply reflect.",
+    "empty": "No suggestions in this format yet.",
+    "general": "A place to start, whatever your week feels like."
+  },
+  "history": {
+    "eyebrow": "YOUR WORDS, YOUR CHOICE",
+    "title": "Conversations.",
+    "description": "A place to return to the things you have talked through.",
+    "empty": "No saved conversations.",
+    "emptyDescription": "Turn on saved history in your preferences to revisit future conversations."
+  },
+  "preferences": {
+    "eyebrow": "KEEP WHAT MATTERS TO YOU",
+    "title": "Your conversations.\nYour choices.",
+    "description": "Choose what stays after a conversation.",
+    "note": "Auto-delete is measured from when a conversation starts. It runs when the app opens, returns to the foreground, and while active; it cannot run while the app is closed."
+  },
+  "memories": {
+    "eyebrow": "ONLY WHAT YOU CHOOSE",
+    "title": "What Zen remembers.",
+    "description": "Details you explicitly ask to keep for future conversations.",
+    "empty": "Nothing remembered yet.",
+    "emptyDescription": "Use Remember a detail in a conversation to choose something to keep."
+  },
+  "common": {
+    "loading": "Opening your space…",
+    "storageReadError": "Saved information could not be opened. Retry, or reset local demo data after confirmation.",
+    "storageWriteError": "Changes could not be saved on this device. Retry before closing the app.",
+    "fixtureError": "The demo data needs a small correction.",
+    "synthetic": "Synthetic demo · no live AI",
+    "deleteConversation": "The selected messages will be removed. Choose whether to also remove their linked information.",
+    "deleteMemory": "This detail will be removed from what Zen remembers."
+  }
+}

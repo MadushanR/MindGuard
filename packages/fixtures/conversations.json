@@ -1,0 +1,37 @@
+{
+  "$schema": "./schemas/conversations.schema.json",
+  "records": [
+    {
+      "id": "sample-chat",
+      "title": "A little space after a busy day",
+      "ageDays": 2,
+      "messages": [
+        {
+          "id": "sample-user",
+          "role": "user",
+          "text": "I would like to unwind after work.",
+          "mode": "text"
+        },
+        {
+          "id": "sample-zen",
+          "role": "assistant",
+          "text": "Would a small pause help you make space for yourself?",
+          "mode": "text"
+        }
+      ]
+    },
+    {
+      "id": "expired-chat",
+      "title": "An older reflection",
+      "ageDays": 10,
+      "messages": [
+        {
+          "id": "expired-user",
+          "role": "user",
+          "text": "I prefer one small step at a time.",
+          "mode": "text"
+        }
+      ]
+    }
+  ]
+}
