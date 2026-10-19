@@ -29,8 +29,11 @@ import {
   type IconName,
 } from "./ui";
 import { ObservationCard } from "../features/ai/ObservationCard";
+import { DesktopNavigation } from "./DesktopNavigation";
+import { useBrowserLayout } from "./responsive";
 
 export function AppShell({ children }: PropsWithChildren) {
+  const { desktop, browser } = useBrowserLayout();
   const insets = useSafeAreaInsets();
   const ai = useAI(),
     path = usePathname(),
@@ -72,18 +75,31 @@ export function AppShell({ children }: PropsWithChildren) {
       onPress={action}
       style={({ pressed }) => [
         shell.headerAction,
+        desktop && { flexDirection: "row", gap: 8, paddingHorizontal: 12 },
         pressed && { backgroundColor: colors.sage },
       ]}
     >
       <Icon name={icon} size={19} />
-      <Text style={shell.headerLabel}>{label}</Text>
+      <Text
+        style={[shell.headerLabel, desktop && { fontSize: 12, lineHeight: 20 }]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
   return (
     <View style={shell.stage}>
-      <SafeAreaView style={shell.frame} edges={["top", "bottom"]}>
+      <SafeAreaView
+        style={[
+          shell.frame,
+          browser && { maxWidth: "100%" },
+          desktop && { flexDirection: "row" },
+        ]}
+        edges={["top", "bottom"]}
+      >
+        {desktop && !signedOut ? <DesktopNavigation path={path} /> : null}
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={{ flex: 1, minWidth: 0 }}
           behavior={
             Platform.OS === "ios"
               ? "padding"
@@ -93,7 +109,7 @@ export function AppShell({ children }: PropsWithChildren) {
           }
           keyboardVerticalOffset={Platform.OS === "web" ? 0 : insets.top}
         >
-          <View style={shell.header}>
+          <View style={[shell.header, desktop && shell.desktopHeader]}>
             <View
               style={{
                 flex: 1,
@@ -102,7 +118,19 @@ export function AppShell({ children }: PropsWithChildren) {
                 gap: 8,
               }}
             >
-              {["/", "/home", "/for-you", "/trends", "/chat"].includes(path) ? (
+              {desktop && !signedOut ? (
+                <>
+                  {headerButton("Back", "back", back)}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Copy kind="caption">
+                      {destinations.find((d) => d.route === path)?.title ??
+                        "MindGuard"}
+                    </Copy>
+                  </View>
+                </>
+              ) : ["/", "/home", "/for-you", "/trends", "/chat"].includes(
+                  path,
+                ) ? (
                 <>
                   <View style={shell.brand}>
                     <Icon name="leaf" color={colors.card} size={19} />
@@ -172,7 +200,7 @@ export function AppShell({ children }: PropsWithChildren) {
                 </View>
               ) : null}
               <View style={{ flex: 1, minHeight: 0 }}>{children}</View>
-              {!signedOut && !focused ? (
+              {!desktop && !signedOut && !focused ? (
                 <View style={shell.nav}>
                   {(
                     [
@@ -370,6 +398,14 @@ const shell = StyleSheet.create({
     gap: 4,
     flexDirection: "row",
     alignItems: "center",
+  },
+  desktopHeader: {
+    minHeight: 88,
+    paddingHorizontal: 32,
+    gap: 18,
+    borderBottomWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.card,
   },
   brand: {
     width: 29,

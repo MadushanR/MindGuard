@@ -18,6 +18,7 @@ import {
 } from "../../../shared/ui";
 import { colors, styles } from "../../../shared/theme";
 import { route } from "../../../shared/navigation";
+import { ResponsiveGrid } from "../../../shared/responsive";
 function ResourceArt({ card }: { card: Recommendation }) {
   const palettes = {
     meadow: ["#E7EDD7", "#C0CEA7", "#91AC7F"],
@@ -98,7 +99,7 @@ export function RecommendationsScreen() {
       ? `${card.emotion} appeared in ${pattern.ranked.find((p) => p.label === card.emotion)?.count ?? 0} of your ${pattern.total} observations this week.`
       : screenCopy.recommendations.general;
   return (
-    <Page>
+    <Page wide>
       <Intro {...screenCopy.recommendations} />
       <Card soft>
         <View style={styles.row}>
@@ -138,41 +139,43 @@ export function RecommendationsScreen() {
         <Copy kind="caption">{cards.length} suggestions</Copy>
       </View>
       {cards.length ? (
-        cards.map((card, i) => (
-          <Pressable
-            key={card.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Explore ${card.title}`}
-            onPress={() => setSelected(card)}
-            style={({ pressed }) => [
-              {
-                borderRadius: 24,
-                borderWidth: 1,
-                borderColor: "#A6BC95",
-                backgroundColor: colors.card,
-                opacity: pressed ? 0.8 : 1,
-                overflow: "hidden",
-              },
-            ]}
-          >
-            <ResourceArt card={card} />
-            <View style={{ padding: 18, gap: 11 }}>
-              <Copy kind="caption">
-                {card.format === "Videos" ? "Illustrative video" : "Guide"}
-              </Copy>
-              <Copy kind="heading">{card.title}</Copy>
-              {i === 0 ? <Copy kind="muted">{card.description}</Copy> : null}
-              <Copy kind="caption">{reason(card)}</Copy>
-              <View style={styles.divider} />
-              <View style={styles.spread}>
+        <ResponsiveGrid>
+          {cards.map((card, i) => (
+            <Pressable
+              key={card.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Explore ${card.title}`}
+              onPress={() => setSelected(card)}
+              style={({ pressed }) => [
+                {
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: "#A6BC95",
+                  backgroundColor: colors.card,
+                  opacity: pressed ? 0.8 : 1,
+                  overflow: "hidden",
+                },
+              ]}
+            >
+              <ResourceArt card={card} />
+              <View style={{ padding: 18, gap: 11 }}>
                 <Copy kind="caption">
-                  Explore {card.format === "Videos" ? "video" : "guide"}
+                  {card.format === "Videos" ? "Illustrative video" : "Guide"}
                 </Copy>
-                <Icon name="arrow" size={15} />
+                <Copy kind="heading">{card.title}</Copy>
+                {i === 0 ? <Copy kind="muted">{card.description}</Copy> : null}
+                <Copy kind="caption">{reason(card)}</Copy>
+                <View style={styles.divider} />
+                <View style={styles.spread}>
+                  <Copy kind="caption">
+                    Explore {card.format === "Videos" ? "video" : "guide"}
+                  </Copy>
+                  <Icon name="arrow" size={15} />
+                </View>
               </View>
-            </View>
-          </Pressable>
-        ))
+            </Pressable>
+          ))}
+        </ResponsiveGrid>
       ) : (
         <Copy kind="muted">{screenCopy.recommendations.empty}</Copy>
       )}

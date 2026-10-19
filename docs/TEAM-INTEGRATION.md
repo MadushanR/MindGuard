@@ -45,6 +45,8 @@ Use the deletion action when integrating broader deletion flows: `deleteConversa
 
 ## Coordinate shared changes
 
+Shared browser layout helpers live in `src/shared/responsive.tsx`. `useBrowserLayout` enables desktop presentation only on web at 900 pixels; `Page wide` and `ResponsiveGrid` give collection screens wider content and two columns from 1100 pixels. Reading and settings pages retain a comfortable maximum width. `DesktopNavigation` owns browser sidebar links; native screens keep the header and bottom navigation. Do not use viewport width alone to change native layouts.
+
 Feature branches should primarily change their owner folder and route wrappers. Coordinate changes to root dependencies, contracts, theme, shell, consent, and deletion behavior with the other owners. Add fixtures under your own package subfolder when new teammate simulations are required; do not alter another owner's JSON IDs casually.
 
 Use Expo-compatible dependency installation from the repository root:

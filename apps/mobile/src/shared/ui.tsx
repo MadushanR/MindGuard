@@ -20,6 +20,7 @@ import { useAI } from "../features/ai/AIProvider";
 import { colors, emotionColors, styles } from "./theme";
 import icons from "./icons.json";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBrowserLayout } from "./responsive";
 export type IconName = keyof typeof icons;
 export function Icon({
   name,
@@ -235,17 +236,20 @@ export function MenuRow({
   description,
   onPress,
   icon = "arrow",
+  selected,
 }: {
   label: string;
   description?: string;
   onPress(): void;
   icon?: IconName;
+  selected?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={selected === undefined ? undefined : { selected }}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onPress={onPress}
@@ -270,6 +274,7 @@ export function Dialog({
   visible = true,
 }: PropsWithChildren<{ title: string; onClose(): void; visible?: boolean }>) {
   const insets = useSafeAreaInsets();
+  const { desktop } = useBrowserLayout();
   return (
     <Modal
       visible={visible}
@@ -289,7 +294,10 @@ export function Dialog({
         }
         keyboardVerticalOffset={Platform.OS === "web" ? 0 : insets.top}
       >
-        <View accessibilityViewIsModal style={local.dialog}>
+        <View
+          accessibilityViewIsModal
+          style={[local.dialog, desktop && { maxWidth: 620 }]}
+        >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ padding: 25, gap: 16 }}

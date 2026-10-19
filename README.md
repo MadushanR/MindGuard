@@ -13,6 +13,8 @@ npm run web
 
 Open `http://localhost:8081`. Select **Explore** in the header to open any screen or load a JSON scenario. Explore is available only in development. Welcome remains the normal launch screen; authentication pages are team placeholders.
 
+Web uses the available browser width. At 900 pixels and above, app screens show a desktop sidebar; recommendations, history, and remembered details use two columns from 1100 pixels. Android and iOS retain the mobile layout. Resizing the browser preserves the current conversation and draft.
+
 ```sh
 npm run android
 ```
@@ -21,7 +23,7 @@ Android requires the tooling described in [Android setup](docs/ANDROID-SETUP.md)
 
 ## Edit simulated outputs
 
-Edit the nine JSON files in [packages/fixtures](packages/fixtures). Change chat replies, voice transcripts and timings, resource cards, sample history, memories, observations, and screen text without editing screen code.
+Edit the eight JSON files in [packages/fixtures](packages/fixtures). Change chat replies, voice transcripts and timings, resource cards, sample history, memories, observations, and screen text without editing screen code.
 
 ```sh
 npm run validate:fixtures
