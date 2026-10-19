@@ -1,0 +1,105 @@
+{
+  "$schema": "./schemas/recommendations.schema.json",
+  "cards": [
+    {
+      "id": "calm-video",
+      "emotion": "Calm",
+      "format": "Videos",
+      "title": "Make space for a quiet moment",
+      "description": "A gentle visual pause to make a little room in your day.",
+      "duration": "5 min",
+      "artwork": "meadow",
+      "detail": "This illustrative video is coming soon. No media service is connected."
+    },
+    {
+      "id": "calm-guide",
+      "emotion": "Calm",
+      "format": "Guides",
+      "title": "Keep the calm in your day",
+      "description": "Explore a small, practical step at your own pace.",
+      "duration": "4 min read",
+      "artwork": "steps",
+      "detail": "This illustrative guide is coming soon. You can edit its description in recommendations.json."
+    },
+    {
+      "id": "tense-video",
+      "emotion": "Tense",
+      "format": "Videos",
+      "title": "A pause for a busy mind",
+      "description": "A gentle visual pause to make a little room in your day.",
+      "duration": "5 min",
+      "artwork": "dunes",
+      "detail": "This illustrative video is coming soon. No media service is connected."
+    },
+    {
+      "id": "tense-guide",
+      "emotion": "Tense",
+      "format": "Guides",
+      "title": "Take the day one step at a time",
+      "description": "Explore a small, practical step at your own pace.",
+      "duration": "4 min read",
+      "artwork": "steps",
+      "detail": "This illustrative guide is coming soon. You can edit its description in recommendations.json."
+    },
+    {
+      "id": "low-video",
+      "emotion": "Low",
+      "format": "Videos",
+      "title": "A small moment of comfort",
+      "description": "A gentle visual pause to make a little room in your day.",
+      "duration": "5 min",
+      "artwork": "dusk",
+      "detail": "This illustrative video is coming soon. No media service is connected."
+    },
+    {
+      "id": "low-guide",
+      "emotion": "Low",
+      "format": "Guides",
+      "title": "Start with one manageable thing",
+      "description": "Explore a small, practical step at your own pace.",
+      "duration": "4 min read",
+      "artwork": "steps",
+      "detail": "This illustrative guide is coming soon. You can edit its description in recommendations.json."
+    },
+    {
+      "id": "hopeful-video",
+      "emotion": "Hopeful",
+      "format": "Videos",
+      "title": "Make room for what matters",
+      "description": "A gentle visual pause to make a little room in your day.",
+      "duration": "5 min",
+      "artwork": "sunrise",
+      "detail": "This illustrative video is coming soon. No media service is connected."
+    },
+    {
+      "id": "hopeful-guide",
+      "emotion": "Hopeful",
+      "format": "Guides",
+      "title": "Turn a little hope into a small step",
+      "description": "Explore a small, practical step at your own pace.",
+      "duration": "4 min read",
+      "artwork": "steps",
+      "detail": "This illustrative guide is coming soon. You can edit its description in recommendations.json."
+    },
+    {
+      "id": "general-video",
+      "emotion": null,
+      "format": "Videos",
+      "title": "A little space to pause",
+      "description": "A gentle visual pause to make a little room in your day.",
+      "duration": "5 min",
+      "artwork": "leaves",
+      "detail": "This illustrative video is coming soon. No media service is connected."
+    },
+    {
+      "id": "general-guide",
+      "emotion": null,
+      "format": "Guides",
+      "title": "Make time for a daily reflection",
+      "description": "Explore a small, practical step at your own pace.",
+      "duration": "4 min read",
+      "artwork": "steps",
+      "detail": "This illustrative guide is coming soon. You can edit its description in recommendations.json."
+    }
+  ]
+}

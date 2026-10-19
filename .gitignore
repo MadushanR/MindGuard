@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+coverage/
+artifacts/
+.tools/
+apps/mobile/.claude/
+.env*
+*.local.json
+*.log
+*.tsbuildinfo
+apps/mobile/android/
+apps/mobile/ios/

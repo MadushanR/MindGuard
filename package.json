@@ -1,0 +1,25 @@
+{
+  "name": "mindguard",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "npm run start -w @mindguard/mobile",
+    "web": "npm run web -w @mindguard/mobile",
+    "android": "node scripts/android.mjs",
+    "typecheck": "npm run typecheck -w @mindguard/mobile",
+    "lint": "npm run lint -w @mindguard/mobile",
+    "test": "npm run test -w @mindguard/mobile",
+    "validate:fixtures": "node packages/fixtures/validate-cli.cjs",
+    "check": "npm run validate:fixtures && npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

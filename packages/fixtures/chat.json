@@ -1,0 +1,52 @@
+{
+  "$schema": "./schemas/chat.schema.json",
+  "introduction": "Hi. What would you like to talk about today?",
+  "suggestedPrompts": [
+    "Can we talk about my sleep?",
+    "I need a moment to unwind.",
+    "Help me find one small next step."
+  ],
+  "scripts": [
+    {
+      "id": "normal",
+      "name": "A supportive conversation",
+      "replies": [
+        {
+          "text": "That sounds like a lot to carry. Would it help to name one small thing you can focus on next?",
+          "delayMs": 900,
+          "observation": {
+            "label": "Tense",
+            "confidence": 0.62
+          }
+        },
+        {
+          "text": "We can take this at your pace. What would feel manageable today?",
+          "delayMs": 900,
+          "observation": {
+            "label": "Hopeful",
+            "confidence": 0.58
+          }
+        }
+      ],
+      "fallback": {
+        "text": "Thank you for sharing. Would you like to keep reflecting, or take a quiet pause?",
+        "delayMs": 900
+      }
+    },
+    {
+      "id": "failure",
+      "name": "One failure, then retry",
+      "replies": [
+        {
+          "text": "We are back. We can take this one step at a time.",
+          "delayMs": 900,
+          "failOnce": true
+        }
+      ],
+      "fallback": {
+        "text": "Would a small pause feel helpful?",
+        "delayMs": 900
+      }
+    }
+  ]
+}
