@@ -9,7 +9,7 @@
   "privacyLink": "Privacy and Consent",
   "signInPrompt": "Already have an account?",
   "successTitle": "Demo form complete",
-  "successDescription": "Your entries passed frontend validation. No account was created and no details were saved. Sign In is currently a placeholder.",
+  "successDescription": "Your entries passed frontend validation. No account was created and no details were saved. Continue to the Sign In demo when you're ready.",
   "successAction": "Continue to Sign In",
   "errors": {
     "summary": "Check the fields below and try again.",

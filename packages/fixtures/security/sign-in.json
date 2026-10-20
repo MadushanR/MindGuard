@@ -1,0 +1,13 @@
+{
+  "eyebrow": "YOUR SPACE, YOUR PACE",
+  "title": "Welcome back.",
+  "description": "Pick up where you left off.",
+  "demoNotice": "Demo sign-in only. Any valid email and invented password of at least 8 characters opens Home. No credentials are checked or saved, and your existing demo records and privacy choices stay unchanged.",
+  "passwordHint": "Use at least 8 characters. Your password is cleared when you leave this screen.",
+  "createAccountPrompt": "New to MindGuard?",
+  "errors": {
+    "summary": "Check the fields below and try again.",
+    "email": "Enter a valid email address, such as alex@example.com.",
+    "password": "Use a password with at least 8 characters."
+  }
+}

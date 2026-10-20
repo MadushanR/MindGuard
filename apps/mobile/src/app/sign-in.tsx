@@ -1,4 +1,1 @@
-import { SecurityScreen } from "../features/security";
-export default function Screen() {
-  return <SecurityScreen id={3} />;
-}
+export { SignInScreen as default } from "../features/security/screens/SignInScreen";
