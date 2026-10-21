@@ -1,0 +1,21 @@
+{
+  "title": "Ask for a check-in.",
+  "description": "Review your message before sending.",
+  "defaultRecipientId": "alex-demo",
+  "defaultMessage": "Hi, I would appreciate a check-in when you have a moment.",
+  "privacyNotice": "Only this message is included. Your conversations and wellness records stay private.",
+  "disabledNotice": "Alerts are disabled for this recipient. Choose another recipient to continue.",
+  "recipientError": "Choose a fictional recipient.",
+  "messageError": "Enter a message before reviewing your alert.",
+  "chooseTitle": "Choose a recipient",
+  "recipientPlaceholder": "Choose a recipient",
+  "reviewTitle": "Review your alert",
+  "reviewNotice": "This is a demo using fictional recipients. Send alert only completes the simulation. No message or notification will be delivered.",
+  "sentTitle": "Review sent",
+  "sentDescription": "Demo complete. No message was delivered, no notification was triggered, and nothing was saved.",
+  "recipients": [
+    { "id": "alex-demo", "name": "Alex Demo", "relationship": "Friend", "alertsEnabled": true },
+    { "id": "sam-example", "name": "Sam Example", "relationship": "Family member", "alertsEnabled": true },
+    { "id": "morgan-sample", "name": "Morgan Sample", "relationship": "Care professional", "alertsEnabled": false }
+  ]
+}
