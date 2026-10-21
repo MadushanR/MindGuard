@@ -1,4 +1,1 @@
-import { SecurityScreen } from "../features/security";
-export default function Screen() {
-  return <SecurityScreen id={12} />;
-}
+export { TrustedContactsScreen as default } from "../features/security/screens/TrustedContactsScreen";

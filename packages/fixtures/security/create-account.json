@@ -1,0 +1,22 @@
+{
+  "eyebrow": "YOUR SPACE, YOUR PACE",
+  "title": "Create your account",
+  "description": "A place to reflect and choose what you keep.",
+  "demoNotice": "Frontend demo only. Use an invented name, email address, and password. This form does not create an account or save your details.",
+  "passwordHint": "Use at least 8 characters. Passwords are cleared when you leave this screen.",
+  "privacyTitle": "Privacy, on your terms",
+  "privacyDescription": "Review Privacy and Consent to learn about the prototype's controls. Submitting this form does not enable voice, tone analysis, emotion observations, or conversation saving.",
+  "privacyLink": "Privacy and Consent",
+  "signInPrompt": "Already have an account?",
+  "successTitle": "Demo form complete",
+  "successDescription": "Your entries passed frontend validation. No account was created and no details were saved. Continue to the Sign In demo when you're ready.",
+  "successAction": "Continue to Sign In",
+  "errors": {
+    "summary": "Check the fields below and try again.",
+    "fullName": "Enter your full name.",
+    "email": "Enter a valid email address, such as alex@example.com.",
+    "password": "Use a password with at least 8 characters.",
+    "confirmRequired": "Confirm your password.",
+    "confirmMismatch": "Passwords must match."
+  }
+}

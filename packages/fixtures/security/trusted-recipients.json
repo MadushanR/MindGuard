@@ -1,0 +1,7 @@
+{
+  "records": [
+    { "id": "demo-friend", "name": "Alex Demo", "relationship": "friend" },
+    { "id": "demo-family", "name": "Sam Example", "relationship": "family" },
+    { "id": "demo-care", "name": "Morgan Sample", "relationship": "care-professional" }
+  ]
+}

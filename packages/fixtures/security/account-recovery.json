@@ -1,0 +1,10 @@
+{
+  "eyebrow": "ACCOUNT RECOVERY",
+  "title": "Let's get you back in.",
+  "description": "Enter the email address associated with your account.",
+  "emailPlaceholder": "you@example.com",
+  "demoNotice": "Frontend demo only. Use an invented email address. No recovery email is sent and your details are not saved.",
+  "emailError": "Enter a valid email address, such as you@example.com.",
+  "confirmationTitle": "Recovery code demo",
+  "confirmationDescription": "Your email address passed frontend validation. This simulates a recovery-code request. No email was sent and no password was changed."
+}

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, View } from "react-native";
 import * as Linking from "expo-linking";
 import { wellnessResources } from "@mindguard/fixtures";
-import { router } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import type { ScreenId } from "@mindguard/contracts";
 import { Page } from "../../shared/Page";
 import {
@@ -21,6 +21,9 @@ import {
 import { colors, styles } from "../../shared/theme";
 import { destination, route } from "../../shared/navigation";
 import { ObservationCard, useAI } from "../ai";
+import { useRecipients, useSharedInformation } from "../security";
+import trustedContactCopy from "../../../../../packages/fixtures/security/trusted-contacts.json";
+import sharedInformationCopy from "../../../../../packages/fixtures/security/shared-information.json";
 import { EmotionTrends } from "./EmotionTrends";
 import { days, visibleObservations, weekDays, type Period } from "./trends";
 import {
@@ -448,6 +451,8 @@ function selectedContent(selected: Metric[]) {
 }
 export function ShareScreen() {
   const w = useWellness();
+  const { recordShare } = useSharedInformation();
+  const confirmed = useRef(false);
   const [preview, setPreview] = useState(false),
     [done, setDone] = useState(false);
   const eligible = w.selected.filter(w.available);
@@ -535,15 +540,19 @@ export function ShareScreen() {
         kind="primary"
         disabled={!valid}
         onPress={() => {
+          confirmed.current = false;
           setPreview(true);
           setDone(false);
         }}
       />
       {done ? (
+        <>
         <Notice>
           Simulation complete. No information was sent and no file was
           downloaded.
         </Notice>
+        <Button label="View shared information" kind="text" onPress={() => go(14)} />
+        </>
       ) : null}
       {preview ? (
         <Dialog
@@ -564,15 +573,19 @@ export function ShareScreen() {
             </Notice>
           ) : null}
           <Notice>
-            This confirms a demo action only. Real sharing requires the team’s
-            security and consent integration.
+            {sharedInformationCopy.previewNotice}
           </Notice>
           <Button
             label="Confirm simulated action"
             disabled={!valid}
             kind="primary"
             onPress={() => {
-              if (!valid) return;
+              if (!valid || confirmed.current) return;
+              confirmed.current = true;
+              if (recipient) recordShare({
+                recipientName: recipient.name,
+                content: selectedContent(eligible),
+              });
               setPreview(false);
               setDone(true);
             }}
@@ -584,18 +597,50 @@ export function ShareScreen() {
 }
 export function RecipientScreen() {
   const w = useWellness();
+  const contacts = useRecipients();
+  const { origin } = useLocalSearchParams<{ origin?: string }>();
+  const trusted = origin === "trusted-contacts";
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
+  const focused = useRef(true);
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    return () => { focused.current = false; };
+  }, []));
   const [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [relationship, setRelationship] = useState(""),
     [attempted, setAttempted] = useState(false);
-  const errors = recipientErrors(name, email, relationship, w.recipients);
+  const errors = trusted ? {
+    name: name.trim() ? "" : trustedContactCopy.nameError,
+    email: "",
+    relationship: relationship.trim() ? "" : trustedContactCopy.relationshipError,
+  } : recipientErrors(name, email, relationship, w.recipients);
   const finish = () => {
     if (router.canGoBack()) router.back();
-    else router.replace(route(w.recipientOrigin === "share" ? 13 : 18));
+    else router.replace(route(trusted ? 12 : w.recipientOrigin === "share" ? 13 : 18));
   };
-  const save = () => {
+  const save = async () => {
+    if (pending.current) return;
     setAttempted(true);
+    setSaveError("");
     if (Object.values(errors).some(Boolean)) return;
+    if (trusted) {
+      if (!contacts.ready) return;
+      pending.current = true;
+      setSaving(true);
+      try {
+        await contacts.addRecipient({ name, relationship });
+        if (focused.current) finish();
+      } catch {
+        if (focused.current) setSaveError(trustedContactCopy.addError);
+      } finally {
+        pending.current = false;
+        if (focused.current) setSaving(false);
+      }
+      return;
+    }
     const id = `recipient-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     w.setRecipients([
       ...w.recipients,
@@ -612,9 +657,9 @@ export function RecipientScreen() {
   return (
     <Page>
       <Intro
-        eyebrow="SHARING DESTINATION"
+        eyebrow={trusted ? trustedContactCopy.eyebrow : "SHARING DESTINATION"}
         title="Add recipient"
-        description="Saving a recipient does not send information."
+        description={trusted ? trustedContactCopy.addDescription : "Saving a recipient does not send information."}
       />
       <Card>
         <Field
@@ -623,9 +668,10 @@ export function RecipientScreen() {
           onChangeText={setName}
           autoComplete="name"
           maxLength={120}
+          editable={!saving}
         />
         {attempted && errors.name ? <Notice error>{errors.name}</Notice> : null}
-        <Field
+        {!trusted ? <Field
           label="Email"
           value={email}
           onChangeText={setEmail}
@@ -633,7 +679,7 @@ export function RecipientScreen() {
           autoCapitalize="none"
           autoComplete="email"
           maxLength={254}
-        />
+        /> : null}
         {attempted && errors.email ? (
           <Notice error>{errors.email}</Notice>
         ) : null}
@@ -643,23 +689,30 @@ export function RecipientScreen() {
           onChangeText={setRelationship}
           placeholder="For example, friend"
           maxLength={120}
+          editable={!saving}
         />
         {attempted && errors.relationship ? (
           <Notice error>{errors.relationship}</Notice>
         ) : null}
       </Card>
-      <Notice>
+      {trusted ? <Notice>{trustedContactCopy.addNotice}</Notice> : <Notice>
         A recipient is a demo sharing destination, not a trusted contact.
         Check-in eligibility and notifications are unavailable until the team’s
         security integration is implemented. Use invented details; this form
         stays in session memory.
-      </Notice>
-      <Button label="Save recipient" kind="primary" onPress={save} />
-      <Button label="Cancel" onPress={finish} />
+      </Notice>}
+      {trusted && contacts.readError ? <>
+        <Notice error>{trustedContactCopy.readError}</Notice>
+        <Button label="Retry opening contacts" onPress={() => void contacts.restoreRecipients()} />
+      </> : trusted && !contacts.ready ? <Notice>{trustedContactCopy.loading}</Notice> : null}
+      {saveError ? <Notice error>{saveError}</Notice> : null}
+      <Button label={saving ? "Saving recipient…" : "Save recipient"} kind="primary" onPress={() => void save()} disabled={trusted && (!contacts.ready || saving)} />
+      <Button label="Cancel" onPress={finish} disabled={saving} />
     </Page>
   );
 }
 export function SettingsScreen() {
+  const { clearShareSession } = useSharedInformation();
   const ai = useAI(),
     w = useWellness();
   const [action, setAction] = useState<"signout" | "delete" | "reset" | null>(null);
@@ -740,8 +793,8 @@ export function SettingsScreen() {
         >
           <Copy>
             {action === "signout"
-              ? "This clears the active conversation and wellness session, then returns to Welcome. Existing saved AI history and preferences remain on this device. No authenticated account is signed out."
-              : action === "reset" ? "This removes all sharing recipients and selections in this session, disconnects the demo watch, and resets wearable permissions and sync state. Saved AI conversations and preferences stay on this device. This cannot be undone."
+              ? "This clears the active conversation, wellness session, and simulated share history, then returns to Welcome. Saved AI history, preferences, and trusted contacts remain on this device. No authenticated account is signed out."
+              : action === "reset" ? "This removes all sharing recipients, selections, and simulated share history in this session, disconnects the demo watch, and resets wearable permissions and sync state. Saved AI records and trusted contacts stay on this device. This cannot be undone."
                 : "No account deletion backend or security confirmation flow exists yet. Use the team's saved-information destination for future integration. This action does not delete local AI records."}
           </Copy>
           <Button
@@ -757,8 +810,12 @@ export function SettingsScreen() {
               if (action === "signout") {
                 ai.leave();
                 w.reset();
+                clearShareSession();
                 router.replace(route(1));
-              } else if (action === "reset") w.reset();
+              } else if (action === "reset") {
+                w.reset();
+                clearShareSession();
+              }
               else go(17);
             }}
           />

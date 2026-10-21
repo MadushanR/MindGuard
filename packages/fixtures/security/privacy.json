@@ -1,0 +1,19 @@
+{
+  "title": "Your privacy choices.",
+  "description": "Separate permissions. Change them at any time.",
+  "draftNotice": "Changes take effect when you save. Leaving this screen discards unsaved changes. Turning a permission off does not delete existing saved information.",
+  "toneNotice": "Enable voice processing before optional tone analysis. Turning voice processing off also turns tone analysis off.",
+  "demoNotice": "Local demo preferences: wellness data, save summaries, sharing, and notifications to contacts are saved choices only. They do not control the current demo flows. Summaries are not generated, and no data sources, sharing services, or notifications are connected.",
+  "voice": { "label": "Voice processing", "description": "Use your voice to talk with Zen." },
+  "chatObservations": { "label": "Chat emotion observations", "description": "Include estimated emotions from chat in Trends." },
+  "tone": { "label": "Optional tone analysis", "description": "Include estimated emotions from your voice. You can correct them." },
+  "wellnessData": { "label": "Wellness data", "description": "Read heart rate, sleep, and activity from your data sources." },
+  "saveSummaries": { "label": "Save summaries", "description": "Keep summaries without full transcripts or raw audio." },
+  "sharing": { "label": "Sharing", "description": "Every share still requires your confirmation." },
+  "contactNotifications": { "label": "Notifications to contacts", "description": "Only chosen recipients, after your confirmation." },
+  "saved": "Privacy preferences saved on this device.",
+  "saving": "Saving privacy preferences…",
+  "readError": "Privacy preferences could not be loaded. Existing saved choices have been kept. Retry loading before making changes.",
+  "writeError": "The local demo preferences could not be saved. No AI permissions were changed by this attempt. Your draft is still here; try Save preferences again.",
+  "aiWriteError": "The demo preferences were saved and AI permissions changed for this session, but AI permissions could not be saved locally. Try Save preferences again before leaving."
+}
