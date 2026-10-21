@@ -1,0 +1,19 @@
+{
+  "title": "Saved information.",
+  "description": "Review what's kept and choose what happens next.",
+  "summaryLabel": "Weekly wellness summary",
+  "recordsLabel": "Wellness records",
+  "sessionNotice": "These are separate, preloaded fictional examples for this session. They are not your connected-watch data or summaries generated from conversations. Reloading or restarting restores the examples.",
+  "available": "Fictional information available for this session.",
+  "unavailable": "No information kept in this category for this session.",
+  "noSelection": "Select at least one available category to export or delete.",
+  "empty": "No demo information remains in this session.",
+  "deleteTitle": "Delete selected demo information?",
+  "deleteDescription": "Only the categories listed below will be removed from this session. The weekly summary is an independent snapshot: deleting wellness records keeps it unless you also select it. Reloading or restarting restores the fictional examples.",
+  "deleteScope": "This does not delete conversations, emotion observations, remembered details, connected-watch records, contacts, privacy preferences, or previously confirmed share snapshots.",
+  "deleted": "Selected demo information removed from this session.",
+  "exportDescription": "Review the saved demo categories you selected.",
+  "exportNotice": "Demo export preview only. No file export, download, sending, or sharing service is connected. This preview does not create a Shared Information record.",
+  "invalidSelection": "The selected demo information is missing or no longer available. Return to Saved information and choose available categories.",
+  "exportDone": "Simulation complete. No information was sent and no file was downloaded."
+}

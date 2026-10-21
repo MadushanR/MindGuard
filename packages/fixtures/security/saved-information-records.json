@@ -1,0 +1,17 @@
+{
+  "weekLabel": "Fictional demo week · Monday–Sunday",
+  "weeklySummary": [
+    "Daily average activity: 6000 steps.",
+    "Average sleep: 7.5 hours per night.",
+    "Average resting heart rate: 68 bpm."
+  ],
+  "wellnessRecords": [
+    "Monday: 5000 steps; 7.0 hours sleep; resting heart rate 70 bpm.",
+    "Tuesday: 6000 steps; 7.5 hours sleep; resting heart rate 68 bpm.",
+    "Wednesday: 5500 steps; 8.0 hours sleep; resting heart rate 67 bpm.",
+    "Thursday: 6500 steps; 7.5 hours sleep; resting heart rate 69 bpm.",
+    "Friday: 6000 steps; 7.0 hours sleep; resting heart rate 68 bpm.",
+    "Saturday: 7000 steps; 8.0 hours sleep; resting heart rate 66 bpm.",
+    "Sunday: 6000 steps; 7.5 hours sleep; resting heart rate 68 bpm."
+  ]
+}
