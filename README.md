@@ -19,7 +19,7 @@ The project brings together conversations, wellness insights, and privacy contro
 
 The repository currently contains a frontend prototype powered by editable JSON simulations. Conversation replies, voice states, observations, recommendations, and sample records use synthetic data. Voice does not capture audio or request microphone access.
 
-Account access, wellness dashboards, wearable connections, trusted contacts, and sharing destinations are registered as placeholders for future implementation. Live AI, backend authentication, wearable integrations, and real sharing are not connected.
+Zain's eight wellness screens are implemented, including session-only simulated wearable records, recipient validation, explicitly confirmed sharing previews, and bundled Canadian support resources. Account access and trusted-contact/security destinations remain placeholders. Live AI, backend authentication, wearable integrations, and real sharing are not connected. Resources can open external websites and, after confirmation, the phone or messaging app; nothing is contacted automatically. See [wellness review instructions](apps/mobile/src/features/wellness/README.md).
 
 Saved information stays on the local device using AsyncStorage. History, voice transcripts, and tone feedback start off; enabling history requires choosing a retention option. Storage is unencrypted, so use invented information when exploring the prototype. Automatic expiry runs while the application operates, including on launch and return to the foreground.
 

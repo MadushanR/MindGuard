@@ -1,6 +1,25 @@
 import type { ScreenId } from "@mindguard/contracts";
-import { PlaceholderScreen } from "../../shared/PlaceholderScreen";
-/** Zain replaces these screen exports; shared navigation and AI internals stay untouched. */
+import {
+  HomeScreen,
+  TrendsScreen,
+  SourcesScreen,
+  ResourcesScreen,
+  ShareScreen,
+  SettingsScreen,
+  WatchScreen,
+  RecipientScreen,
+} from "./screens";
+export { WellnessProvider } from "./state";
 export function WellnessScreen({ id }: { id: ScreenId }) {
-  return <PlaceholderScreen id={id} />;
+  const Screen = {
+    5: HomeScreen,
+    9: TrendsScreen,
+    10: SourcesScreen,
+    11: ResourcesScreen,
+    13: ShareScreen,
+    18: SettingsScreen,
+    19: WatchScreen,
+    20: RecipientScreen,
+  }[id as 5 | 9 | 10 | 11 | 13 | 18 | 19 | 20];
+  return <Screen />;
 }

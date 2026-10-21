@@ -31,8 +31,10 @@ import {
 import { ObservationCard } from "../features/ai/ObservationCard";
 import { DesktopNavigation } from "./DesktopNavigation";
 import { useBrowserLayout } from "./responsive";
+import { useWellness } from "../features/wellness/state";
 
 export function AppShell({ children }: PropsWithChildren) {
+  const wellness = useWellness();
   const { desktop, browser } = useBrowserLayout();
   const insets = useSafeAreaInsets();
   const ai = useAI(),
@@ -256,6 +258,7 @@ export function AppShell({ children }: PropsWithChildren) {
                     kind="danger"
                     onPress={() => {
                       void ai.resetLocalData();
+                      wellness.reset();
                       closeReview();
                       router.replace(route(1));
                     }}
@@ -284,13 +287,13 @@ export function AppShell({ children }: PropsWithChildren) {
               ) : (
                 <>
                   <Notice>{screenCopy.common.synthetic}</Notice>
-                  <Copy kind="heading">Your screens</Copy>
+                  <Copy kind="heading">Screens and ownership</Copy>
                   {destinations
-                    .filter((d) => d.owner === "Madushan")
                     .map((d) => (
                       <MenuRow
                         key={d.id}
                         label={`${String(d.id).padStart(2, "0")} ${d.title}`}
+                        description={d.owner}
                         onPress={() => {
                           closeReview();
                           router.push(route(d.id));
@@ -345,20 +348,6 @@ export function AppShell({ children }: PropsWithChildren) {
                     .filter((o) => !o.dismissed)
                     .map((o) => (
                       <ObservationCard key={o.id} observation={o} />
-                    ))}
-                  <Copy kind="heading">Teammate destinations</Copy>
-                  {destinations
-                    .filter((d) => d.owner !== "Madushan")
-                    .map((d) => (
-                      <MenuRow
-                        key={d.id}
-                        label={`${String(d.id).padStart(2, "0")} ${d.title}`}
-                        description={d.owner}
-                        onPress={() => {
-                          closeReview();
-                          router.push(route(d.id));
-                        }}
-                      />
                     ))}
                   <Card>
                     <Copy kind="caption">
