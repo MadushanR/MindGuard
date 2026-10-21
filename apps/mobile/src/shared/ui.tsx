@@ -70,16 +70,20 @@ export function Copy({
 }
 export function Button({
   label,
+  accessibilityLabel,
   onPress,
   kind = "secondary",
   icon,
   disabled = false,
+  selected,
 }: {
   label: string;
+  accessibilityLabel?: string;
   onPress(): void;
   kind?: "primary" | "secondary" | "danger" | "text";
   icon?: IconName;
   disabled?: boolean;
+  selected?: boolean;
 }) {
   const [focus, setFocus] = useState(false),
     { model } = useAI();
@@ -92,8 +96,8 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onFocus={() => setFocus(true)}
       onBlur={() => setFocus(false)}

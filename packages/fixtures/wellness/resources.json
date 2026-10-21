@@ -1,0 +1,48 @@
+{
+  "region": "Canada",
+  "reviewedOn": "2026-10-20",
+  "offline": "These Canadian contact details are included in the app. Calling and texting require a working phone service; websites require internet access. MindGuard does not monitor emergencies or contact anyone automatically. Outside Canada, use your local emergency and crisis services.",
+  "items": [
+    {
+      "id": "crisis",
+      "title": "Suicide crisis support",
+      "description": "In Canada, call or text 9-8-8 for suicide crisis support, available 24 hours a day in English and French.",
+      "actions": [
+        {
+          "label": "Call 9-8-8",
+          "url": "tel:988?oai_link_source=model_response_hotline"
+        },
+        {
+          "label": "Text 9-8-8",
+          "url": "sms:988?oai_link_source=model_response_hotline"
+        },
+        {
+          "label": "Visit the helpline website",
+          "url": "https://988.ca/?oai_link_source=model_response_hotline"
+        }
+      ]
+    },
+    {
+      "id": "emergency",
+      "title": "Immediate danger",
+      "description": "If you are in immediate danger or need urgent medical support in Canada, call 9-1-1.",
+      "actions": [
+        {
+          "label": "Call 9-1-1",
+          "url": "tel:911"
+        }
+      ]
+    },
+    {
+      "id": "wellness",
+      "title": "Mental health support",
+      "description": "Government of Canada information about mental health support and provincial and territorial services.",
+      "actions": [
+        {
+          "label": "Find Canadian mental health support",
+          "url": "https://www.canada.ca/en/public-health/services/mental-health-services/mental-health-get-help.html"
+        }
+      ]
+    }
+  ]
+}

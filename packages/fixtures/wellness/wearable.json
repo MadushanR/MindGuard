@@ -1,0 +1,41 @@
+{
+  "steps": {
+    "label": "Steps",
+    "unit": "steps",
+    "values": [
+      5200,
+      6100,
+      4800,
+      7200,
+      6500,
+      8100,
+      5600
+    ]
+  },
+  "sleep": {
+    "label": "Sleep",
+    "unit": "hours",
+    "values": [
+      7,
+      7.5,
+      6.5,
+      8,
+      7,
+      8.5,
+      7.5
+    ]
+  },
+  "heart": {
+    "label": "Resting heart rate",
+    "unit": "bpm",
+    "values": [
+      68,
+      67,
+      70,
+      66,
+      68,
+      65,
+      67
+    ]
+  }
+}
