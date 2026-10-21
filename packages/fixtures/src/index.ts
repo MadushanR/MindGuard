@@ -6,6 +6,8 @@ import emotions from "../emotions.json";
 import memories from "../remembered-details.json";
 import scenarios from "../scenarios.json";
 import copy from "../screen-copy.json";
+import wearable from "../wellness/wearable.json";
+import resources from "../wellness/resources.json";
 import { validateBundle } from "../validate.cjs";
 import type {
   ChatScript,
@@ -30,9 +32,13 @@ export const rawFixtures = {
   "remembered-details": memories,
   scenarios,
   "screen-copy": copy,
+  "wellness/wearable": wearable,
+  "wellness/resources": resources,
 };
 export const fixtureErrors = validateBundle(rawFixtures);
 export const screenCopy = copy;
+export const wellnessRecords = wearable;
+export const wellnessResources = resources;
 export const chatContent = chat;
 export const voiceContent = voice;
 export const demoScenarios = fixtureErrors.length

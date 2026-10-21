@@ -4,6 +4,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
+import { wellnessRecords } from "@mindguard/fixtures";
 
 // No wellness/security integration contracts exist yet. These demo models stay
 // session-only and never enter the existing AI AsyncStorage profile.
@@ -17,23 +18,7 @@ export interface Recipient {
 export const metricInfo: Record<
   Metric,
   { label: string; unit: string; values: number[] }
-> = {
-  steps: {
-    label: "Steps",
-    unit: "steps",
-    values: [5200, 6100, 4800, 7200, 6500, 8100, 5600],
-  },
-  sleep: {
-    label: "Sleep",
-    unit: "hours",
-    values: [7, 7.5, 6.5, 8, 7, 8.5, 7.5],
-  },
-  heart: {
-    label: "Resting heart rate",
-    unit: "bpm",
-    values: [68, 67, 70, 66, 68, 65, 67],
-  },
-};
+> = wellnessRecords;
 export const metrics = Object.keys(metricInfo) as Metric[];
 export function recipientErrors(
   name: string,
@@ -46,8 +31,8 @@ export function recipientErrors(
     email: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
       ? "Enter a valid email address."
       : recipients.some(
-            (r) => r.email.toLowerCase() === email.trim().toLowerCase(),
-          )
+        (r) => r.email.toLowerCase() === email.trim().toLowerCase(),
+      )
         ? "This email is already a recipient."
         : "",
     relationship: relationship.trim()
@@ -67,6 +52,8 @@ function useController() {
   });
   const [paused, setPaused] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [simulateSyncFailure, setSimulateSyncFailure] = useState(false);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [destination, setDestination] = useState("export");
   const [selected, setSelected] = useState<Metric[]>([]);
@@ -74,13 +61,20 @@ function useController() {
     "settings",
   );
   const available = (metric: Metric) =>
-    watch === "connected" && !paused && synced && permissions[metric];
+    watch === "connected" && !paused && synced && !syncFailed && permissions[metric];
+  const sync = () => {
+    if (watch !== "connected" || paused || !metrics.some((m) => permissions[m])) return;
+    setSyncFailed(simulateSyncFailure);
+    setSynced(!simulateSyncFailure);
+  };
   const reset = () => {
     setWatch("disconnected");
     setDevice("My smartwatch");
     setPermissions({ steps: false, sleep: false, heart: false });
     setPaused(false);
     setSynced(false);
+    setSyncFailed(false);
+    setSimulateSyncFailure(false);
     setRecipients([]);
     setDestination("export");
     setSelected([]);
@@ -97,6 +91,10 @@ function useController() {
     setPaused,
     synced,
     setSynced,
+    syncFailed,
+    simulateSyncFailure,
+    setSimulateSyncFailure,
+    sync,
     recipients,
     setRecipients,
     destination,

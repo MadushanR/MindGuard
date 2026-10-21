@@ -1,0 +1,94 @@
+{
+  "type": "object",
+  "required": [
+    "steps",
+    "sleep",
+    "heart"
+  ],
+  "properties": {
+    "steps": {
+      "type": "object",
+      "required": [
+        "label",
+        "unit",
+        "values"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          }
+        }
+      }
+    },
+    "sleep": {
+      "type": "object",
+      "required": [
+        "label",
+        "unit",
+        "values"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 24
+          }
+        }
+      }
+    },
+    "heart": {
+      "type": "object",
+      "required": [
+        "label",
+        "unit",
+        "values"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 300
+          }
+        }
+      }
+    }
+  }
+}

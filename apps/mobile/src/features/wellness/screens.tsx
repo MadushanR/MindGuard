@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { AppState, View } from "react-native";
+import * as Linking from "expo-linking";
+import { wellnessResources } from "@mindguard/fixtures";
 import { router } from "expo-router";
 import type { ScreenId } from "@mindguard/contracts";
 import { Page } from "../../shared/Page";
@@ -19,6 +21,8 @@ import {
 import { colors, styles } from "../../shared/theme";
 import { destination, route } from "../../shared/navigation";
 import { ObservationCard, useAI } from "../ai";
+import { EmotionTrends } from "./EmotionTrends";
+import { days, visibleObservations, weekDays, type Period } from "./trends";
 import {
   metricInfo,
   metrics,
@@ -88,26 +92,20 @@ export function HomeScreen() {
 export function TrendsScreen() {
   const ai = useAI();
   const w = useWellness();
-  const [period, setPeriod] = useState<"This week" | "Last week">("This week");
+  const [period, setPeriod] = useState<Period>("This week");
   const [filter, setFilter] = useState("All");
-  const [clock] = useState(() => Date.now());
-  const now = new Date(clock);
-  now.setHours(0, 0, 0, 0);
-  now.setDate(
-    now.getDate() - ((now.getDay() + 6) % 7) - (period === "Last week" ? 7 : 0),
-  );
-  const start = now.getTime(),
-    end = Math.min(start + 7 * 86400000 - 1, clock);
-  const observations = ai.observations.filter(
-    (o) =>
-      !o.dismissed &&
-      o.createdAt >= start &&
-      o.createdAt <= end &&
-      (o.source === "Chat"
-        ? ai.consent.chatObservations
-        : ai.consent.tone && ai.consent.voice) &&
-      (filter === "All" || o.source === filter),
-  );
+  const [day, setDay] = useState<number | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const update = () => setClock(Date.now());
+    const pending = setTimeout(update, 0);
+    const timer = setInterval(update, 60_000);
+    const subscription = AppState.addEventListener("change", (state) => { if (state === "active") update(); });
+    return () => { clearTimeout(pending); clearInterval(timer); subscription.remove(); };
+  }, [ai.observations]);
+  const boundaries = weekDays(clock, period);
+  const observations = visibleObservations(ai.observations, ai.consent, clock, period, filter);
+  const recent = day === null ? observations : observations.filter((o) => o.createdAt >= boundaries[day] && o.createdAt < boundaries[day + 1]);
   return (
     <Page>
       <Intro
@@ -121,7 +119,8 @@ export function TrendsScreen() {
             key={p}
             label={p}
             kind={period === p ? "primary" : "secondary"}
-            onPress={() => setPeriod(p)}
+            selected={period === p}
+            onPress={() => { setPeriod(p); setDay(null); }}
           />
         ))}
       </View>
@@ -179,29 +178,15 @@ export function TrendsScreen() {
             key={f}
             label={f}
             kind={filter === f ? "primary" : "secondary"}
-            onPress={() => setFilter(f)}
+            selected={filter === f}
+            onPress={() => { setFilter(f); setDay(null); }}
           />
         ))}
       </View>
-      <Card>
-        <Copy kind="heading">Daily observation counts</Copy>
-        {Array.from({ length: 7 }, (_, i) => (
-          <Copy key={i}>
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}:{" "}
-            {
-              observations.filter(
-                (o) =>
-                  o.createdAt >= start + i * 86400000 &&
-                  o.createdAt < start + (i + 1) * 86400000,
-              ).length
-            }{" "}
-            observations
-          </Copy>
-        ))}
-      </Card>
-      <Copy kind="heading">Recent observations</Copy>
-      {observations.length ? (
-        [...observations]
+      <EmotionTrends observations={observations} boundaries={boundaries} day={day} onDay={setDay} />
+      <Copy kind="heading">{day === null ? "Recent observations" : `${days[day]} observations`}</Copy>
+      {recent.length ? (
+        [...recent]
           .sort((a, b) => b.createdAt - a.createdAt)
           .map((o) => (
             <View key={o.id}>
@@ -212,9 +197,10 @@ export function TrendsScreen() {
             </View>
           ))
       ) : (
-        <Notice>No observations available for this period and filter.</Notice>
+        <Notice>No observations available for this period and filter{day === null ? "." : " and day."}</Notice>
       )}
       <Link id={10} />
+      <Link id={13} label="Export or share" />
     </Page>
   );
 }
@@ -255,23 +241,27 @@ export function SourcesScreen() {
             }}
           />
         ))}
+        <Toggle label="Simulate sync failure" value={w.simulateSyncFailure} onChange={w.setSimulateSyncFailure} />
         <Button
-          label="Sync demo records"
+          label={w.syncFailed ? "Retry sync" : "Sync demo records"}
           disabled={
             w.watch !== "connected" ||
             w.paused ||
             !metrics.some((m) => w.permissions[m])
           }
-          onPress={() => w.setSynced(true)}
+          onPress={w.sync}
         />
+        {w.syncFailed ? <Notice error>Demo sync failed. Turn off simulated sync failure, then retry. Records are unavailable until sync succeeds.</Notice> : null}
         <Copy kind="muted">
           {w.paused
             ? "Sync paused. Records are unavailable across wellness and sharing."
             : w.watch !== "connected"
               ? "Connect a demo watch before syncing."
-              : w.synced
-                ? "Demo records synced. Only permitted records are available."
-                : "No demo records synced yet."}
+              : w.syncFailed
+                ? "No demo records available after the failed sync."
+                : w.synced
+                  ? "Demo records synced. Only permitted records are available."
+                  : "No demo records synced yet."}
         </Copy>
       </Card>
       <Card>
@@ -401,18 +391,31 @@ export function WatchScreen() {
   );
 }
 export function ResourcesScreen() {
+  const [pending, setPending] = useState<{ label: string; url: string } | null>(null);
+  const [linkError, setLinkError] = useState("");
+  const open = async (url: string) => {
+    setLinkError("");
+    try { await Linking.openURL(url); }
+    catch { setLinkError("This device could not open that link. Use the contact details shown here on a phone, or try the website when internet access is available."); }
+  };
   return (
     <Page>
       <Intro
         eyebrow="SUPPORT"
         title="Wellness and crisis resources"
-        description="Support information should be available without starting a conversation."
+        description="Canadian support information, available without starting a conversation."
       />
-      <Notice error>
-        Approved local crisis-resource content has not been supplied in this
-        repository. This prototype cannot provide crisis support or contact
-        emergency services.
-      </Notice>
+      <Copy kind="caption">Region: {wellnessResources.region} · Sources checked {wellnessResources.reviewedOn}</Copy>
+      {wellnessResources.items.map((resource) => <Card key={resource.id} soft={resource.id === "crisis"}>
+        <Copy kind="heading">{resource.title}</Copy>
+        <Copy>{resource.description}</Copy>
+        {resource.actions.map((action) => <Button key={action.url} label={action.label} onPress={() => {
+          if (/^(tel|sms):/.test(action.url)) { setLinkError(""); setPending(action); }
+          else void open(action.url);
+        }} />)}
+      </Card>)}
+      <Notice>{wellnessResources.offline}</Notice>
+      {linkError ? <Notice error>{linkError}</Notice> : null}
       <Card>
         <Copy kind="heading">Support contacts</Copy>
         <Copy kind="muted">
@@ -430,11 +433,10 @@ export function ResourcesScreen() {
         </Copy>
         <Link id={21} label="Explore wellness suggestions" />
       </Card>
-      <Copy kind="caption">
-        Integration needed: approved regional resources, reviewed wording,
-        links, and offline fallback content. No external contact action is
-        enabled here.
-      </Copy>
+      {pending ? <Dialog title="Open another app?" onClose={() => setPending(null)}>
+        <Copy>{pending.label} opens your phone or messaging app. MindGuard does not place a call, send a message, or attach your records automatically.</Copy>
+        <Button label="Continue to phone or messaging app" kind="primary" onPress={() => { const url = pending.url; setPending(null); void open(url); }} />
+      </Dialog> : null}
     </Page>
   );
 }
@@ -660,7 +662,7 @@ export function RecipientScreen() {
 export function SettingsScreen() {
   const ai = useAI(),
     w = useWellness();
-  const [action, setAction] = useState<"signout" | "delete" | null>(null);
+  const [action, setAction] = useState<"signout" | "delete" | "reset" | null>(null);
   const settings: [ScreenId, string][] = [
     [19, "Smartwatch"],
     [12, "Trusted contacts"],
@@ -724,37 +726,40 @@ export function SettingsScreen() {
       />
       <Button
         label="Reset wellness session"
-        onPress={() => {
-          w.reset();
-        }}
+        onPress={() => setAction("reset")}
       />
       {action ? (
         <Dialog
           title={
             action === "signout"
               ? "Leave the demo?"
-              : "Account deletion unavailable"
+              : action === "reset" ? "Reset wellness session?"
+                : "Account deletion unavailable"
           }
           onClose={() => setAction(null)}
         >
           <Copy>
             {action === "signout"
               ? "This clears the active conversation and wellness session, then returns to Welcome. Existing saved AI history and preferences remain on this device. No authenticated account is signed out."
-              : "No account deletion backend or security confirmation flow exists yet. Use the team's saved-information destination for future integration. This action does not delete local AI records."}
+              : action === "reset" ? "This removes all sharing recipients and selections in this session, disconnects the demo watch, and resets wearable permissions and sync state. Saved AI conversations and preferences stay on this device. This cannot be undone."
+                : "No account deletion backend or security confirmation flow exists yet. Use the team's saved-information destination for future integration. This action does not delete local AI records."}
           </Copy>
           <Button
             label={
               action === "signout"
                 ? "Confirm leave demo"
-                : "Open saved information"
+                : action === "reset" ? "Confirm reset wellness session"
+                  : "Open saved information"
             }
+            kind={action === "reset" ? "danger" : "secondary"}
             onPress={() => {
               setAction(null);
               if (action === "signout") {
                 ai.leave();
                 w.reset();
                 router.replace(route(1));
-              } else go(17);
+              } else if (action === "reset") w.reset();
+              else go(17);
             }}
           />
         </Dialog>

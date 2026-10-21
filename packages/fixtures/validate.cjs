@@ -7,6 +7,8 @@ const names = [
   "remembered-details",
   "scenarios",
   "screen-copy",
+  "wellness/wearable",
+  "wellness/resources",
 ];
 const schemas = {
   chat: require("./schemas/chat.schema.json"),
@@ -17,6 +19,8 @@ const schemas = {
   "remembered-details": require("./schemas/remembered-details.schema.json"),
   scenarios: require("./schemas/scenarios.schema.json"),
   "screen-copy": require("./schemas/screen-copy.schema.json"),
+  "wellness/wearable": require("./schemas/wellness-wearable.schema.json"),
+  "wellness/resources": require("./schemas/wellness-resources.schema.json"),
 };
 function check(value, schema, root, field, errors) {
   if (schema.$ref)
@@ -55,6 +59,8 @@ function check(value, schema, root, field, errors) {
     }
     if (value.length < (schema.minItems || 0))
       errors.push(`${field}: add at least ${schema.minItems} item(s)`);
+    if (schema.maxItems !== undefined && value.length > schema.maxItems)
+      errors.push(`${field}: use at most ${schema.maxItems} item(s)`);
     value.forEach((item, i) =>
       check(item, schema.items, root, `${field}[${i}]`, errors),
     );
@@ -79,6 +85,15 @@ function validateBundle(bundle) {
   for (const name of names)
     check(bundle[name], schemas[name], schemas[name], `${name}.json`, errors);
   if (errors.length) return errors;
+  const resourceIds = new Set();
+  for (const resource of bundle["wellness/resources"].items) {
+    if (resourceIds.has(resource.id)) errors.push(`wellness/resources.json: duplicate ID '${resource.id}'`);
+    resourceIds.add(resource.id);
+    for (const action of resource.actions) {
+      if (!/^(https:\/\/[^\s]+|tel:\+?[\d-]+(?:\?[^\s]+)?|sms:\+?[\d-]+(?:\?[^\s]+)?)$/.test(action.url))
+        errors.push(`wellness/resources.json: unsupported URL '${action.url}'`);
+    }
+  }
   if (
     bundle.scenarios.defaults.preferences.saveHistory &&
     bundle.scenarios.defaults.preferences.retentionDays === null

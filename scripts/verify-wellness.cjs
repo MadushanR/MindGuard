@@ -1,9 +1,10 @@
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+fs.mkdirSync('artifacts', { recursive: true });
 const base = process.env.MINDGUARD_URL || 'http://localhost:8081';
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
   const errors = [], missing = [], checks = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -36,6 +37,12 @@ const base = process.env.MINDGUARD_URL || 'http://localhost:8081';
     await sw('Allow steps records').check();
     await sw('Allow sleep records').check();
     await b('Sync demo records').click();
+    await text('Demo records synced.');
+    await sw('Simulate sync failure').check();
+    await b('Sync demo records').click();
+    await text('Demo sync failed.');
+    await sw('Simulate sync failure').uncheck();
+    await b('Retry sync').click();
     await text('Demo records synced.');
     checks.push('Watch failure, retry, connection, permission and sync');
     await explore('13 Export and Share Preview');
@@ -106,9 +113,18 @@ const base = process.env.MINDGUARD_URL || 'http://localhost:8081';
     await text('No observations available');
     checks.push('Populated observation confirm/correct/dismiss and shared consent-disabled filtering');
     await explore('18 Settings and Account');
+    await b('Reset wellness session').click();
+    await page.getByRole('dialog').getByRole('button', {name:'Cancel',exact:true}).click();
+    await text('Settings and account');
     await sw('Larger text').check();
     await sw('Reduced motion').check();
     checks.push('Paused source disables sharing; Settings updates shared accessibility preferences');
+    await explore('11 Wellness and Crisis Resources');
+    await text('Suicide crisis support');
+    await b('Call 9-8-8').click();
+    await page.getByRole('dialog').getByRole('button', {name:'Cancel',exact:true}).click();
+    await text('These Canadian contact details are included');
+    checks.push('Resources render bundled Canadian support details; contact-app confirmation cancels without opening an external app');
     // Reload each screen at each size, with persisted larger text enabled.
     for (const large of [false, true]) {
       await explore('18 Settings and Account');

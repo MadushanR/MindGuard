@@ -78,6 +78,9 @@ Fixtures cannot bypass consent, temporary-chat restrictions, valid voice transit
 
 ## Other editable files
 
+- `wellness/wearable.json`: labels, units, and exactly seven Monday–Sunday synthetic values for steps, sleep, and resting heart rate. Home, Trends, and Share read this same fixture. Schemas reject incomplete weeks, negative measurements, sleep over 24 hours, and values outside demo ranges.
+- `wellness/resources.json`: Canadian support wording, region, source review date, bundled fallback instructions, and external actions. Keep phone/SMS/HTTPS destinations verified against official sources; never put scripts or arbitrary URL schemes in this file. Resource links are not activated by automated browser checks.
+
 - `conversations.json`: titles, text/voice messages, IDs, and age in days.
 - `emotions.json`: source, original estimate, confidence, status, optional corrected label, dismissal state, and age. A corrected label is required exactly when status is `Corrected`.
 - `remembered-details.json`: explicitly chosen text, optional conversation links, and age.

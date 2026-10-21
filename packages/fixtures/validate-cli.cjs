@@ -10,6 +10,8 @@ const names = [
   "remembered-details",
   "scenarios",
   "screen-copy",
+  "wellness/wearable",
+  "wellness/resources",
 ];
 const bundle = {},
   errors = [];
