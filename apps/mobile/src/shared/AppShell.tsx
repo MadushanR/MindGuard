@@ -32,8 +32,10 @@ import { ObservationCard } from "../features/ai/ObservationCard";
 import { DesktopNavigation } from "./DesktopNavigation";
 import { useBrowserLayout } from "./responsive";
 import { useWellness } from "../features/wellness/state";
+import { useSharedInformation } from "../features/security";
 
 export function AppShell({ children }: PropsWithChildren) {
+  const { clearShareSession } = useSharedInformation();
   const wellness = useWellness();
   const { desktop, browser } = useBrowserLayout();
   const insets = useSafeAreaInsets();
@@ -251,7 +253,8 @@ export function AppShell({ children }: PropsWithChildren) {
                 <>
                   <Copy>
                     This removes locally saved demo conversations, observations,
-                    memories, and preferences. JSON files stay intact.
+                    memories, preferences, the wellness session, and simulated
+                    share history. Persistent trusted contacts and JSON files stay intact.
                   </Copy>
                   <Button
                     label="Reset demo data"
@@ -259,6 +262,7 @@ export function AppShell({ children }: PropsWithChildren) {
                     onPress={() => {
                       void ai.resetLocalData();
                       wellness.reset();
+                      clearShareSession();
                       closeReview();
                       router.replace(route(1));
                     }}

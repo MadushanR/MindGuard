@@ -1,0 +1,21 @@
+{
+  "eyebrow": "PEOPLE IN YOUR CORNER",
+  "title": "Your support circle.",
+  "description": "The people you choose to share with.",
+  "emptyTitle": "Connection starts here.",
+  "emptyDescription": "Add a friend, family member, or care professional. You decide what to share.",
+  "loading": "Opening your support circle…",
+  "readError": "Your saved contacts could not be opened. Retry to load them; your saved data has not been replaced.",
+  "writeError": "The new contact could not be saved. Existing contacts are unchanged. Return to Add Recipient to try again.",
+  "saving": "Saving your contact…",
+  "addDescription": "Add someone to your support circle.",
+  "addNotice": "Use invented details in this demo. The name and relationship are saved on this device. Adding someone does not share information or enable check-ins or notifications.",
+  "nameError": "Enter a full name.",
+  "relationshipError": "Enter your relationship to this person.",
+  "addError": "The contact could not be saved. Your entries are still here. Please try again.",
+  "relationships": {
+    "friend": "Friend",
+    "family": "Family member",
+    "care-professional": "Care professional"
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren, type Ref, type ComponentRef } from "react";
 import {
   AccessibilityInfo,
   Animated,
@@ -69,6 +69,7 @@ export function Copy({
   );
 }
 export function Button({
+  ref,
   label,
   accessibilityLabel,
   onPress,
@@ -77,6 +78,7 @@ export function Button({
   disabled = false,
   selected,
 }: {
+  ref?: Ref<ComponentRef<typeof View>>;
   label: string;
   accessibilityLabel?: string;
   onPress(): void;
@@ -95,6 +97,7 @@ export function Button({
         : colors.teal;
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled, selected }}

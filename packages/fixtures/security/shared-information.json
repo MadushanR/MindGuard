@@ -1,0 +1,13 @@
+{
+  "title": "Shared information.",
+  "description": "See what you've shared and manage future access.",
+  "emptyTitle": "Nothing shared yet.",
+  "emptyDescription": "Every share starts with your choice and confirmation.",
+  "sessionNotice": "These are sharing simulations from this session. No information was sent. Records clear when the app reloads or you confirm a session reset or leave the demo.",
+  "reviewTitle": "Review shared information",
+  "revokeTitle": "Revoke access?",
+  "revokeDescription": "This removes the selected demo share from this session. No real access is changed. Source wellness data and saved information stay unchanged.",
+  "revokedNotice": "Demo access revoked. The selected share has been removed.",
+  "demoLabel": "Simulated share · This session",
+  "previewNotice": "This confirms a demo action only. Recipient-sharing confirmations appear in Shared Information for this session. Export previews are not recorded there. No information is sent."
+}

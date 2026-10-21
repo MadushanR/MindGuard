@@ -5,6 +5,7 @@ import * as Linking from "expo-linking";
 import { useAI } from "../../ai";
 import { ResourcesScreen, SettingsScreen, SourcesScreen, TrendsScreen } from "../screens";
 import { useWellness, WellnessProvider } from "../state";
+import { SharedInformationProvider } from "../../security";
 
 const mockAI = {
   observations: [] as Observation[], consent: { chatObservations: true, tone: true, voice: true },
@@ -31,7 +32,7 @@ jest.mock("../../../shared/ui", () => {
 });
 let wellness: ReturnType<typeof useWellness>;
 function Capture({ children }: PropsWithChildren) { const value = useWellness(); useEffect(() => { wellness = value; }, [value]); return children; }
-function Wrapper({ children }: PropsWithChildren) { return <WellnessProvider><Capture>{children}</Capture></WellnessProvider>; }
+function Wrapper({ children }: PropsWithChildren) { return <WellnessProvider><SharedInformationProvider><Capture>{children}</Capture></SharedInformationProvider></WellnessProvider>; }
 afterEach(async () => { await cleanup(); jest.restoreAllMocks(); mockAI.observations = []; jest.useRealTimers(); jest.mocked(Linking.openURL).mockReset().mockResolvedValue(true); });
 const observation = (id: string, createdAt: number): Observation => ({ id, createdAt, source: "Chat", predictedLabel: "Calm", confidence: 0.6, status: "Estimated", dismissed: false });
 
