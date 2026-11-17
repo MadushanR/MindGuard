@@ -2,6 +2,8 @@
 
 This is the team's single starting guide. Each member works in their own clone and feature branch, inside the existing application.
 
+For the merged live voice increment, run `npm run setup:env` from the repository root and follow [team environment setup](ENVIRONMENT-SETUP.md). It creates all current local environment files without replacing existing values. The older frontend-only instructions below describe the original prototype phase; current live voice operation is documented in [VOICE-LOCAL.md](VOICE-LOCAL.md).
+
 ## 1. Get access and install the basics
 
 - Make sure your GitHub account can access `MadushanR/MindGuard` and push branches. If you cannot, ask Madushan for collaborator access.

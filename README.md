@@ -35,6 +35,8 @@ Prototype saved information stays on the local device using AsyncStorage. Histor
 
 ## Getting started
 
+After cloning or pulling the merged app, run `npm run setup:env` to create the local environment files without overwriting existing settings. All current templates, the values Madushan must supply privately, and AWS login requirements are explained in [team environment setup](docs/ENVIRONMENT-SETUP.md).
+
 For the complete live voice product, start Docker Desktop with Linux containers, then run:
 
 ```powershell

@@ -10,6 +10,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "setup:env": "node scripts/setup-env.mjs",
     "start": "npm run start -w @mindguard/mobile",
     "web": "npm run web -w @mindguard/mobile",
     "android": "node scripts/android.mjs",
