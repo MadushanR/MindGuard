@@ -6,22 +6,22 @@ The project brings together conversations, wellness insights, and privacy contro
 
 ## Features
 
-- **Conversations with Zen:** text chat and a simulated voice conversation interface.
+- **Conversations with Zen:** continuous live voice through the local relay, temporary text continuation, and the existing simulated text-chat experience.
 - **Personalized recommendations:** illustrative videos and guides associated with recent emotion observations.
 - **Emotion feedback:** optional, uncertain estimates that can be confirmed, corrected, or dismissed.
 - **Conversation history:** optional local saving, conversation reopening, and individual or bulk deletion.
 - **Temporary conversations:** sessions that stay in memory and clear when leaving the conversation screens.
 - **Remembered details:** explicitly entered information that can be reviewed and removed.
-- **Privacy preferences:** separate consent controls, optional voice transcripts, and configurable retention.
+- **Privacy preferences:** separate consent controls and configurable retention for prototype history; live voice transcripts are not saved.
 - **Responsive presentation:** a desktop browser workspace and mobile layouts for smaller screens and Android.
 
 ## Current status
 
-The repository currently contains a frontend prototype powered by editable JSON simulations. Conversation replies, voice states, observations, recommendations, and sample records use synthetic data. Voice does not capture audio or request microphone access.
+The FA3 voice increment connects real microphone capture, Cognito authentication, DynamoDB voice consent and OpenAI Realtime through a NestJS relay. The relay validates completed transcripts, applies the approved deterministic policy, and checks buffered output before playback. See [local voice setup](docs/VOICE-LOCAL.md), [implementation scope](docs/VOICE-INCREMENT.md), and [recorded verification and limits](docs/VOICE-VERIFICATION.md). EKS migration is deferred to April 2027.
 
-Zain's eight wellness screens are implemented, including session-only simulated wearable records, recipient validation, explicitly confirmed sharing previews, and bundled Canadian support resources. Account access and trusted-contact/security destinations remain placeholders. Live AI, backend authentication, wearable integrations, and real sharing are not connected. Resources can open external websites and, after confirmation, the phone or messaging app; nothing is contacted automatically. See [wellness review instructions](apps/mobile/src/features/wellness/README.md).
+Other prototype screens still use editable JSON simulations for text chat, observations, recommendations and sample records. Zain's eight wellness screens include session-only simulated wearable records, recipient validation, explicitly confirmed sharing previews, and bundled Canadian support resources. Munsif's account, privacy, saved-information and trusted-contact screens are implemented as frontend prototypes; the voice screen has its own replaceable real account adapter. Wearable integrations and real sharing are not connected. Resources can open external websites and, after confirmation, the phone or messaging app; nothing is contacted automatically. See [wellness review instructions](apps/mobile/src/features/wellness/README.md).
 
-Saved information stays on the local device using AsyncStorage. History, voice transcripts, and tone feedback start off; enabling history requires choosing a retention option. Storage is unencrypted, so use invented information when exploring the prototype. Automatic expiry runs while the application operates, including on launch and return to the foreground.
+Prototype saved information stays on the local device using AsyncStorage. History and tone feedback start off; enabling history requires choosing a retention option. Storage is unencrypted, so use invented information when exploring the prototype. Automatic expiry runs while the application operates, including on launch and return to the foreground. Live voice tokens, audio and transcripts stay out of application storage; authentication/consent use AWS, and voice processing uses OpenAI under the on-screen disclosure.
 
 ## Technology
 
@@ -34,6 +34,17 @@ Saved information stays on the local device using AsyncStorage. History, voice t
 - Jest and React Native Testing Library
 
 ## Getting started
+
+For the complete live voice product, start Docker Desktop with Linux containers, then run:
+
+```powershell
+aws login --profile mindguard
+.\scripts\voice-local.ps1 -Action Up
+```
+
+Open **http://localhost:8080/voice**. Local credentials and the approved policy must be configured as described in [local voice setup](docs/VOICE-LOCAL.md).
+
+For frontend development:
 
 Use Node.js 24 and npm. From the repository root:
 
@@ -58,15 +69,7 @@ node scripts/android.mjs --no-bundler
 
 See [Android setup](docs/ANDROID-SETUP.md) for native toolchain requirements.
 
-For an iPhone preview using Expo Go, install a version supporting SDK 58, connect the phone and computer to the same Wi-Fi, and run:
-
-```sh
-cd apps/mobile
-npx expo login
-npx expo start --go --lan
-```
-
-Sign into Expo Go with the same Expo account and scan the QR code. Current dependencies appear compatible, but iPhone testing and native iOS build validation are still pending. See [Expo's device instructions](https://docs.expo.dev/get-started/start-developing/).
+Live native voice requires a custom native build because it includes a raw-audio module. Android verification uses the Android Studio emulator. Native iOS has not been built, installed or tested; the available environment has no Mac or paid Apple Developer membership. Expo Go and browser previews do not establish native iOS functionality.
 
 Run the following repository commands from the root; use `cd ../..` to return there from `apps/mobile`.
 
@@ -74,8 +77,10 @@ Run the following repository commands from the root; use `cd ../..` to return th
 
 ```text
 apps/mobile/          Expo application, routes, feature modules, and shared UI
+apps/voice-relay/     NestJS relay, provider adapter, consent and safety configuration
 packages/contracts/  Shared TypeScript models and interfaces
 packages/fixtures/   Editable simulation data, schemas, and validation
+packages/voice-core/ Voice session lifecycle and deterministic processing policy
 docs/                Design, setup, and development documentation
 scripts/             Local build and verification tools
 ```

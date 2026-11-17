@@ -1,0 +1,5 @@
+{
+  "version": "TEST-ONLY-NOT-APPROVED",
+  "fixedResourcePhrases": ["synthetic resource trigger"],
+  "blockedOutputPhrases": ["synthetic disallowed output"]
+}

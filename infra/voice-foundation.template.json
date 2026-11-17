@@ -1,0 +1,172 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "MindGuard voice foundation: real identity, consent metadata, image registry and empty provider-secret slot. EKS is a separate deployment stage.",
+  "Resources": {
+    "VoiceUsers": {
+      "Type": "AWS::Cognito::UserPool",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "UserPoolName": "mindguard-voice-users",
+        "UsernameAttributes": [
+          "email"
+        ],
+        "AutoVerifiedAttributes": [
+          "email"
+        ],
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true
+        },
+        "MfaConfiguration": "OFF",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 12,
+            "RequireUppercase": true,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "TemporaryPasswordValidityDays": 1
+          }
+        },
+        "UserPoolTags": {
+          "Project": "MindGuard"
+        }
+      }
+    },
+    "VoiceClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "UserPoolId": {
+          "Ref": "VoiceUsers"
+        },
+        "ClientName": "mindguard-voice-client",
+        "GenerateSecret": false,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_PASSWORD_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH"
+        ],
+        "PreventUserExistenceErrors": "ENABLED",
+        "EnableTokenRevocation": true,
+        "AccessTokenValidity": 15,
+        "IdTokenValidity": 15,
+        "RefreshTokenValidity": 1,
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "days"
+        }
+      }
+    },
+    "VoiceAccess": {
+      "Type": "AWS::DynamoDB::Table",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "TableName": "mindguard-voice-access",
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "pk",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "sk",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "pk",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "sk",
+            "KeyType": "RANGE"
+          }
+        ],
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+        "TimeToLiveSpecification": {
+          "AttributeName": "expiresAt",
+          "Enabled": true
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "MindGuard"
+          }
+        ]
+      }
+    },
+    "VoiceImages": {
+      "Type": "AWS::ECR::Repository",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "RepositoryName": "mindguard-voice-relay",
+        "ImageTagMutability": "IMMUTABLE",
+        "ImageScanningConfiguration": {
+          "ScanOnPush": true
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "MindGuard"
+          }
+        ]
+      }
+    },
+    "VoiceProviderSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Name": "mindguard/voice/openai",
+        "Description": "Set the real API key from the ignored local environment after deployment.",
+        "SecretString": "{\"OPENAI_API_KEY\":\"\"}",
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "MindGuard"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "CognitoIssuer": {
+      "Value": {
+        "Fn::Sub": "https://cognito-idp.${AWS::Region}.amazonaws.com/${VoiceUsers}"
+      }
+    },
+    "CognitoUserPoolId": {
+      "Value": {
+        "Ref": "VoiceUsers"
+      }
+    },
+    "CognitoClientId": {
+      "Value": {
+        "Ref": "VoiceClient"
+      }
+    },
+    "VoiceTable": {
+      "Value": {
+        "Ref": "VoiceAccess"
+      }
+    },
+    "VoiceRepositoryUri": {
+      "Value": {
+        "Fn::GetAtt": [
+          "VoiceImages",
+          "RepositoryUri"
+        ]
+      }
+    },
+    "VoiceSecretArn": {
+      "Value": {
+        "Ref": "VoiceProviderSecret"
+      }
+    }
+  }
+}

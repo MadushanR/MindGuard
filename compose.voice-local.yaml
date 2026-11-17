@@ -1,0 +1,62 @@
+name: mindguard-voice-local
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile.web
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      voice-relay:
+        condition: service_healthy
+    logging:
+      driver: local
+      options:
+        max-size: "5m"
+        max-file: "2"
+  voice-relay:
+    build:
+      context: .
+      dockerfile: apps/voice-relay/Dockerfile
+    env_file:
+      - ./apps/voice-relay/.env
+    environment:
+      PORT: "3001"
+      AWS_REGION: ca-central-1
+      # React Native Android derives its socket Origin from the relay URL.
+      ALLOWED_ORIGINS: http://localhost:8080,http://localhost:8081,http://localhost:3001
+      # Use only the local refreshable credential process, never an inherited Windows profile.
+      AWS_ACCESS_KEY_ID: ""
+      AWS_SECRET_ACCESS_KEY: ""
+      AWS_SESSION_TOKEN: ""
+      AWS_PROFILE: mindguard-local
+      AWS_DEFAULT_PROFILE: mindguard-local
+      AWS_CONFIG_FILE: /app/apps/voice-relay/local-aws.config
+      AWS_SHARED_CREDENTIALS_FILE: /dev/null
+      AWS_EC2_METADATA_DISABLED: "true"
+      VOICE_POLICY_FILE: /app/policy/voice-policy.json
+      VOICE_POLICY_APPROVED: "true"
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - type: bind
+        source: ./artifacts/voice-runtime
+        target: /run/mindguard-voice
+        read_only: true
+      - type: bind
+        source: ./apps/voice-relay/policy.approved.json
+        target: /app/policy/voice-policy.json
+        read_only: true
+    init: true
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/voice/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: local
+      options:
+        max-size: "5m"
+        max-file: "2"

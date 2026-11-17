@@ -78,16 +78,16 @@ export function PreferencesScreen() {
       </Card>
       <Card>
         <Copy kind="heading">Voice, on your terms.</Copy>
-        <Copy kind="muted">Audio recordings are never captured or saved.</Copy>
+        <Copy kind="muted">
+          Live voice uses your microphone and sends audio for processing. Audio
+          and live voice transcripts are not saved to your history.
+        </Copy>
         <Toggle
           label="Include voice transcripts in saved history"
-          disabled={!draft.saveHistory}
-          value={draft.saveVoiceTranscripts}
-          onChange={(v) => {
-            setDraft({ ...draft, saveVoiceTranscripts: v });
-            setSaved(false);
-          }}
-          description="Requires saved history. Temporary conversations never save transcripts."
+          disabled
+          value={false}
+          onChange={() => {}}
+          description="Unavailable for live voice. Any earlier simulation preference does not enable live transcript saving."
         />
       </Card>
       {error ? <Notice error>{error}</Notice> : null}

@@ -1,6 +1,10 @@
 # Team frontend integration
 
+> FA3 voice update (November 16, 2026): `/voice` now uses `LiveVoiceProvider`, the real relay, minimal Cognito sign-in and server consent. Its temporary text handoff is shown inside `/chat` without passing live content to the simulation's storage. See `VOICE-INCREMENT.md` and `VOICE-LOCAL.md`. The older simulation-specific descriptions below apply to the remaining prototype behavior, not to the live voice path. Munsif can replace the `VoiceIdentityPort` integration; the shared-team alignment is still pending. Broader account screens were not replaced by the voice-only auth UI.
+
 The application is one Expo/React Native app. Clone this repository and run `npm ci` at its root. Commit the root `package-lock.json` whenever agreed dependencies change; do not create another app or lockfile for your pages.
+
+The voice PR incorporates main through `a589971`, including Munsif's merged security prototypes and their shared providers. Those providers remain mounted alongside `LiveVoiceProvider`. This preserves the merged frontend work; it does not connect the prototype sign-in flow to Cognito or complete the separate FA2 backend integration.
 
 ## Ownership
 

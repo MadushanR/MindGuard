@@ -1,0 +1,23 @@
+{
+  "version": "voice-capstone-v1-2026-11-15",
+  "fixedResourcePhrases": [
+    "i want to kill myself",
+    "i am going to kill myself",
+    "i want to end my life",
+    "i am going to end my life",
+    "i plan to hurt myself",
+    "i am going to hurt someone",
+    "i plan to kill someone"
+  ],
+  "blockedOutputPhrases": [
+    "you should kill yourself",
+    "you should hurt yourself",
+    "you should hurt someone",
+    "you have bipolar disorder",
+    "you have schizophrenia",
+    "stop taking your medication",
+    "increase your medication dose",
+    "i have contacted emergency services",
+    "i have notified your emergency contact"
+  ]
+}
