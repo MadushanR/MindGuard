@@ -38,6 +38,9 @@ const env = {
   PATH: [
     path.join(javaHome, "bin"),
     path.join(sdk, "platform-tools"),
+    // Native audio's prebuilt-library task invokes Git Bash and needs its core utilities.
+    ...(process.platform === "win32" && existsSync("C:/Program Files/Git/usr/bin")
+      ? ["C:/Program Files/Git/usr/bin"] : []),
     process.env.PATH,
   ].join(path.delimiter),
 };

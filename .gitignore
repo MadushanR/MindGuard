@@ -11,3 +11,6 @@ apps/mobile/.claude/
 *.tsbuildinfo
 apps/mobile/android/
 apps/mobile/ios/
+
+# Track configuration templates, never real environment files.
+!.env.example

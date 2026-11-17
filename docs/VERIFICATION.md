@@ -1,5 +1,7 @@
 # Frontend verification
 
+This document records the earlier simulation baseline. For the current live FA3 voice increment, use [voice verification](VOICE-VERIFICATION.md) and [local operation](VOICE-LOCAL.md). The old simulation voice journeys and microphone-permission statements below describe that earlier build.
+
 Madushan's eight screens and the shared foundation were verified locally. Zain and Munsif's destinations remain explicit placeholders.
 
 ## Automated checks

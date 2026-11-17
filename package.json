@@ -17,7 +17,9 @@
     "lint": "npm run lint -w @mindguard/mobile",
     "test": "npm run test -w @mindguard/mobile",
     "validate:fixtures": "node packages/fixtures/validate-cli.cjs",
-    "check": "npm run validate:fixtures && npm run typecheck && npm run lint && npm test"
+    "check": "npm run validate:fixtures && npm run typecheck && npm run lint && npm test",
+    "build:voice": "npm run build -w @mindguard/voice-core && npm run build -w @mindguard/voice-relay",
+    "test:voice": "npm test -w @mindguard/voice-core && npm test -w @mindguard/voice-relay"
   },
   "devDependencies": {
     "playwright": "^1.64.1"

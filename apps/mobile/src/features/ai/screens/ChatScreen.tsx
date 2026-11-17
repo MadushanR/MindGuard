@@ -16,7 +16,13 @@ import {
 import { colors, styles } from "../../../shared/theme";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
+import { useLiveVoiceOptional } from "../live/LiveVoiceProvider";
+import { VoiceTextScreen } from "../live/VoiceTextScreen";
 export function ChatScreen() {
+  const live = useLiveVoiceOptional();
+  return live?.handoff || live?.textMode ? <VoiceTextScreen /> : <SimulationChatScreen />;
+}
+function SimulationChatScreen() {
   const { desktop } = useBrowserLayout();
   const ai = useAI(),
     [draft, setDraft] = useState(""),

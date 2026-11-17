@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/.expo
+**/.env
+**/.env.*
+**/artifacts
+**/coverage
+.git
+.idea
+**/.tools
+**/.vscode
+**/.claude
+**/*.log
+**/*.tsbuildinfo
+**/*.local.json
+**/android
+**/ios

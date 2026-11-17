@@ -1,0 +1,17 @@
+FROM node:24-alpine AS build
+WORKDIR /app
+ENV CI=1 EXPO_NO_TELEMETRY=1 EXPO_OFFLINE=1
+COPY package.json package-lock.json ./
+COPY apps/mobile/package.json apps/mobile/package.json
+COPY apps/voice-relay/package.json apps/voice-relay/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+COPY packages/fixtures/package.json packages/fixtures/package.json
+COPY packages/voice-core/package.json packages/voice-core/package.json
+RUN --mount=type=cache,target=/root/.npm npm ci --workspace @mindguard/mobile --include-workspace-root=false
+COPY . .
+RUN npm run export:web -w @mindguard/mobile
+
+FROM nginx:stable-alpine
+COPY apps/mobile/nginx.voice.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/mobile/dist /usr/share/nginx/html
+EXPOSE 80

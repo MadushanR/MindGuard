@@ -1,7 +1,19 @@
 {
   "expo": {
     "scheme": "mindguard",
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      "./plugins/withLocalVoiceNetwork.cjs",
+      [
+        "react-native-audio-api",
+        {
+          "iosMicrophonePermission": "MindGuard uses your microphone for your voice conversation with Zen.",
+          "iosBackgroundMode": false,
+          "androidForegroundService": false,
+          "androidPermissions": ["android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"]
+        }
+      ]
+    ],
     "userInterfaceStyle": "light",
     "slug": "mindguard",
     "ios": {
@@ -14,8 +26,7 @@
     },
     "android": {
       "package": "com.mindguard.capstone",
-      "softwareKeyboardLayoutMode": "resize",
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+      "softwareKeyboardLayoutMode": "resize"
     },
     "version": "0.1.0",
     "orientation": "portrait",

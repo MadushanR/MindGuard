@@ -44,8 +44,10 @@ The first build downloads Gradle and native dependencies. If Metro is already ru
 node scripts/android.mjs --no-bundler --device emulator-5554
 ```
 
-The package ID is `com.mindguard.capstone`. The development build uses the same source and JSON fixtures as the browser preview. It explicitly blocks microphone permission because all voice behavior is simulated.
+The package ID is `com.mindguard.capstone`. FA3 live voice now enables microphone permission through the audio plugin, uses raw PCM buffers without recording files, and stops capture on backgrounding. Rebuild the native binary after plugin changes. The local network plugin permits only loopback HTTP for the relay; remote endpoints still require HTTPS.
 
-Use Explore to load scenarios and verify chat, voice states, local saving, and deletion. Stop and relaunch the application to verify persistence. Test keyboard visibility and composer position on the emulator; browser results do not establish native correctness.
+For the local relay, forward the emulator's loopback port with `adb reverse tcp:3001 tcp:3001` and build with `EXPO_PUBLIC_VOICE_RELAY_URL=http://localhost:3001`. See `VOICE-LOCAL.md` for the complete Docker/emulator flow and platform verification limits.
+
+Use Explore in development builds to load synthetic scenarios for the remaining prototype flows. Live voice and its temporary text handoff never enter saved history. Stop and relaunch the application to verify the separate simulation's persistence. Browser results do not establish native correctness.
 
 Reference: [Expo local Android setup](https://docs.expo.dev/get-started/set-up-your-environment/?buildEnv=local&device=simulated&mode=development-build&platform=android).
