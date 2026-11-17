@@ -7,6 +7,8 @@ Use the existing app and the existing AWS foundation. EKS migration is deferred 
 From the repository root in PowerShell, with Docker Desktop using Linux containers:
 
 ```powershell
+npm run setup:env
+# Add the OpenAI key to apps/voice-relay/.env and configure your authorized AWS profile first.
 aws login --profile mindguard
 .\scripts\voice-local.ps1 -Action Up
 ```
@@ -19,7 +21,7 @@ The web server proxies `/api/voice/*`, including WebSockets, to the relay. Both 
 
 ## Local credentials and policy
 
-Keep `apps/voice-relay/.env` ignored; never overwrite an existing key. If absent, copy `.env.example` and configure it locally. The current selected models are `gpt-realtime-mini` and `gpt-4o-mini-transcribe`.
+Keep `apps/voice-relay/.env` ignored; never overwrite an existing key. `npm run setup:env` creates missing local files from the root, frontend and relay templates and preserves existing files. See `ENVIRONMENT-SETUP.md` for their different loaders and which settings require private access. The relay template already contains the selected `gpt-realtime-mini` and `gpt-4o-mini-transcribe` models and public foundation references; supply the OpenAI key locally.
 
 Verified foundation references:
 
