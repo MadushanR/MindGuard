@@ -90,7 +90,7 @@ test("resources require explicit confirmation before opening a contact app", asy
   expect(Linking.openURL).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByLabelText("Text 9-8-8"));
   await fireEvent.press(screen.getByLabelText("Continue to phone or messaging app"));
-  expect(Linking.openURL).toHaveBeenCalledWith("sms:988?oai_link_source=model_response_hotline");
+  expect(Linking.openURL).toHaveBeenCalledWith("sms:988");
 });
 test("resource links report failure while bundled contact information stays visible", async () => {
   jest.mocked(Linking.openURL).mockRejectedValueOnce(new Error("offline"));
