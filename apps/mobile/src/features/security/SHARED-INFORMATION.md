@@ -6,7 +6,7 @@
 `simulateFailure` and `setSimulateFailure`. The immutable snapshot model contains an
 ID, recipient name, confirmation time, the exact confirmed content strings, the
 originating `requestId` when one was used, and an optional `revocation` state
-(`pending` or `failed`). It excludes recipient email, raw conversations/audio,
+(`pending`, `failed` or `unknown`). It excludes recipient email, raw conversations/audio,
 source records, and permissions. No AsyncStorage, account identity, backend, or real
 sharing/revocation service is connected.
 
@@ -24,16 +24,20 @@ ownership and sharing consent on the server. No such endpoint exists yet.
 
 `submitShare({recipientName, content, requestId})` records the snapshot only after
 the service completes. Results are `complete`, `failed`, `unknown` (no answer within
-`timeoutMs`, default 15 s) or `stale` (the share session was cleared while waiting).
+`timeoutMs`, default 15 s, or a rejected service call with no authoritative result)
+or `stale` (the share session was cleared while waiting).
 Retrying with the same `requestId` and an identical recipient/content payload cannot
 create a duplicate: an existing record is returned, an in-flight request is reused,
 and a late completion is recorded once. Reusing a `requestId` with a different
 payload — whether already recorded or still in flight — returns `CONFLICT` and
 records nothing.
+The request ID remains bound to its original payload after a rejected service call;
+an unchanged retry reaches the service using the same ID, while changed content or
+recipient returns `CONFLICT`. Only an explicit service failure is a definite failure.
 
 `revokeShare(id)` marks the record `pending`, calls the service, and removes the
 record only after the service confirms. A failure sets `failed` (access unchanged).
-No answer within the wait limit sets `unknown` (access may or may not have ended) —
+No answer within the wait limit or a rejected service call sets `unknown` (access may or may not have ended) —
 it is never shown as failed or revoked. Both keep the record; retry reuses the same
 revocation request ID; a late confirmation still removes the record; a repeat call
 while pending is ignored. `recordShare` remains for existing callers/tests and records a
@@ -56,8 +60,9 @@ Screen 14 reviews snapshots, even after selections or recipients change. **Revok
 access** opens confirmation explaining that copies already downloaded, copied or
 forwarded cannot be recalled; Cancel preserves the record. Confirm shows a pending
 state until the simulated service confirms, then removes only that record and
-returns keyboard focus to **Share information**. A failed or unanswered attempt keeps
-the record, labels it "access unchanged", and offers **Try revoking again**. This
+returns keyboard focus to **Share information**. An explicit failed result keeps
+the record and labels it "access unchanged"; a timeout or connection error keeps it
+with an unknown outcome. Both offer **Try revoking again**. This
 models demo access revocation only. Source wellness data, saved AI information, and
 persistent trusted contacts are unaffected.
 

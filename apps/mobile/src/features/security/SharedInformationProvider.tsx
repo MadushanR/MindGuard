@@ -70,6 +70,8 @@ export function SharedInformationProvider({
   // Incremented on clear so late responses from an ended session never change new state.
   const generation = useRef(0);
   const serviceIds = useRef(new Map<string, string>());
+  // Keep the binding after a transport rejection: the operation may have executed.
+  const requestPayloads = useRef(new Map<string, string>());
   const inFlight = useRef(new Map<string, { payload: string; request: Promise<ShareServiceResult> }>());
   const revokeRequests = useRef(new Map<string, string>());
   const revoking = useRef(new Set<string>());
@@ -93,6 +95,9 @@ export function SharedInformationProvider({
   ): Promise<ShareSubmitResult> => {
     const snapshot = normalizeShare(input);
     const payload = sharePayload(snapshot);
+    const previousPayload = requestPayloads.current.get(input.requestId);
+    if (previousPayload !== undefined && previousPayload !== payload) return { status: "failed", error: "CONFLICT" };
+    requestPayloads.current.set(input.requestId, payload);
     // A reused requestId is only a safe retry when its payload is identical; otherwise it
     // is a conflict and must never return or create a share for different content.
     const existing = latest.current.find((record) => record.requestId === input.requestId);
@@ -106,7 +111,7 @@ export function SharedInformationProvider({
     if (pending && pending.payload !== payload) return { status: "failed", error: "CONFLICT" };
     let request = pending?.request;
     if (!request) {
-      request = sharing.createShare({ ...snapshot, requestId: input.requestId });
+      request = (async () => sharing.createShare({ ...snapshot, requestId: input.requestId }))();
       inFlight.current.set(input.requestId, { payload, request });
       // Record a completed share even if the caller stopped waiting: it was accepted.
       void request.then((result) => {
@@ -121,7 +126,8 @@ export function SharedInformationProvider({
     try {
       result = await within(request, timeoutMs);
     } catch {
-      return generation.current === session ? { status: "failed", error: "UNAVAILABLE" } : { status: "stale" };
+      // A rejected connection does not prove the server rejected the operation.
+      return generation.current === session ? { status: "unknown" } : { status: "stale" };
     }
     if (generation.current !== session) return { status: "stale" };
     if (result === TIMED_OUT) return { status: "unknown" };
@@ -143,7 +149,8 @@ export function SharedInformationProvider({
       revokeRequests.current.set(id, requestId);
     }
     dispatch({ type: "revocation", id, state: "pending" });
-    const request = sharing.revokeShare(serviceIds.current.get(id) ?? id, requestId);
+    const serviceId = serviceIds.current.get(id) ?? id;
+    const request = (async () => sharing.revokeShare(serviceId, requestId))();
     // A late confirmation still completes revocation for the current session.
     void request.then((result) => {
       if (generation.current === session && result.status === "complete") {
@@ -155,7 +162,8 @@ export function SharedInformationProvider({
     try {
       result = await within(request, timeoutMs);
     } catch {
-      result = { status: "failed", error: "UNAVAILABLE" };
+      // Preserve uncertainty if the server response was lost after revocation.
+      result = TIMED_OUT;
     } finally {
       revoking.current.delete(id);
     }
@@ -175,6 +183,7 @@ export function SharedInformationProvider({
   const clearShareSession = useCallback(() => {
     generation.current += 1;
     serviceIds.current.clear();
+    requestPayloads.current.clear();
     inFlight.current.clear();
     revokeRequests.current.clear();
     revoking.current.clear();
