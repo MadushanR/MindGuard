@@ -16,10 +16,11 @@ import {
   Intro,
   MenuRow,
 } from "../../../shared/ui";
-import { colors, styles } from "../../../shared/theme";
+import { useTheme } from "../../../shared/theme";
 import { route } from "../../../shared/navigation";
 import { ResponsiveGrid } from "../../../shared/responsive";
 function ResourceArt({ card }: { card: Recommendation }) {
+  const { colors } = useTheme();
   const palettes = {
     meadow: ["#E7EDD7", "#C0CEA7", "#91AC7F"],
     leaves: ["#E3EAD7", "#B3C6A0", "#79996F"],
@@ -59,7 +60,7 @@ function ResourceArt({ card }: { card: Recommendation }) {
           width: 47,
           height: 47,
           borderRadius: 30,
-          backgroundColor: "rgba(255,254,250,0.9)",
+          backgroundColor: colors["art-overlay"],
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -83,6 +84,7 @@ function ResourceArt({ card }: { card: Recommendation }) {
   );
 }
 export function RecommendationsScreen() {
+  const { colors, styles } = useTheme();
   const ai = useAI(),
     [filter, setFilter] = useState<"All" | "Videos" | "Guides">("All"),
     [selected, setSelected] = useState<Recommendation | null>(null);
@@ -150,7 +152,7 @@ export function RecommendationsScreen() {
                 {
                   borderRadius: 24,
                   borderWidth: 1,
-                  borderColor: "#A6BC95",
+                  borderColor: colors["art-border"],
                   backgroundColor: colors.card,
                   opacity: pressed ? 0.8 : 1,
                   overflow: "hidden",

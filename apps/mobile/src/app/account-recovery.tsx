@@ -1,1 +1,5 @@
-export { AccountRecoveryScreen as default } from "../features/security/screens/AccountRecoveryScreen";
+import { AccountRecoveryScreen } from "../features/security/screens/AccountRecoveryScreen";
+
+export default function AccountRecoveryRoute() {
+  return <AccountRecoveryScreen />;
+}

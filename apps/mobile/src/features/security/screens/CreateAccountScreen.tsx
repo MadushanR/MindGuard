@@ -17,7 +17,7 @@ import {
 } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
-import { colors } from "../../../shared/theme";
+import { createThemedStyles, useTheme } from "../../../shared/theme";
 import {
   accountReducer,
   initialAccountState,
@@ -25,7 +25,9 @@ import {
   type AccountFields,
 } from "../createAccount";
 
-export function CreateAccountScreen() {
+export function CreateAccountScreen({ returnTo = "/sign-in" }: { returnTo?: "/sign-in" | "/chat" | "/voice" } = {}) {
+  const { mode } = useTheme();
+  const local = screenStyles[mode];
   const session = useSecuritySessionOptional();
   const [confirmEmail, setConfirmEmail] = useState("");
   const [code, setCode] = useState("");
@@ -163,7 +165,7 @@ export function CreateAccountScreen() {
           <Button
             label="Sign in"
             kind="text"
-            onPress={() => router.push(route(3))}
+            onPress={() => router.push(returnTo)}
           />
         </View>
       </View>
@@ -187,7 +189,7 @@ export function CreateAccountScreen() {
             kind="primary"
             onPress={() => {
               dispatch({ type: "close" });
-              router.replace(route(3));
+              router.replace(returnTo);
             }}
           />
         </Dialog>
@@ -196,7 +198,7 @@ export function CreateAccountScreen() {
   );
 }
 
-const local = StyleSheet.create({
+const screenStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   layout: { gap: 24 },
   desktop: { flexDirection: "row", alignItems: "flex-start", gap: 48 },
   introduction: { gap: 18 },
@@ -204,4 +206,4 @@ const local = StyleSheet.create({
   form: { flex: 1, minWidth: 0, gap: 18 },
   largerField: { fontSize: 17.5, lineHeight: 26.25 },
   invalid: { borderColor: colors["form-error"] },
-});
+}));

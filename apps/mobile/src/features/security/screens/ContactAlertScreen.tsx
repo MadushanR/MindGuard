@@ -7,7 +7,7 @@ import { Page } from "../../../shared/Page";
 import { Button, Card, Copy, Dialog, Field, Icon, MenuRow, Notice } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
-import { colors, styles } from "../../../shared/theme";
+import { createThemedStyles, useTheme } from "../../../shared/theme";
 import {
   alertRecipient, contactAlertReducer, initialContactAlertState, validateAlert,
 } from "../contactAlert";
@@ -20,6 +20,8 @@ export function ContactAlertScreen() {
   return <SimulatedContactAlertScreen />;
 }
 function SimulatedContactAlertScreen() {
+  const { colors, mode, styles } = useTheme();
+  const local = screenStyles[mode];
   const [state, dispatch] = useReducer(contactAlertReducer, initialContactAlertState);
   const [focused, setFocused] = useState(false);
   const { desktop } = useBrowserLayout();
@@ -133,7 +135,7 @@ function SimulatedContactAlertScreen() {
     </Page>
   );
 }
-const local = StyleSheet.create({
+const screenStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   layout: { gap: 24 },
   desktop: { flexDirection: "row", alignItems: "flex-start", gap: 48 },
   column: { flex: 1, minWidth: 0 },
@@ -146,4 +148,4 @@ const local = StyleSheet.create({
   focus: { borderColor: colors.focus, outlineColor: colors.focus, outlineWidth: 2, outlineOffset: 3 },
   largerField: { fontSize: 17.5, lineHeight: 26.25 },
   invalid: { borderColor: colors["form-error"] },
-});
+}));

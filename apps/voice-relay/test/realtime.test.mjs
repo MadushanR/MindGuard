@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { WebSocketServer, WebSocket } from "ws";
 import { OpenAIConversationAdapter } from "../dist/realtime.js";
 
-async function harness(t) {
+async function harness(t, modality = "audio") {
   const server = new WebSocketServer({ port: 0, host: "127.0.0.1" });
   await once(server, "listening");
   const events = [];
@@ -32,7 +32,7 @@ async function harness(t) {
       new WebSocket(`ws://127.0.0.1:${server.address().port}`, options),
   );
   provider.on("failure", () => {});
-  await provider.openControlledVoice();
+  await provider.openControlledVoice(modality);
   t.after(() => {
     provider.close();
     for (const s of server.clients) s.terminate();
@@ -50,6 +50,34 @@ async function harness(t) {
     e.type.startsWith("response.output_") ? { item_id: "output-item", output_index: 0, content_index: 0, ...e } : e,
   )), until };
 }
+
+test("standalone chat requests text and accepts only a completed matching assistant reply", async (t) => {
+  const h = await harness(t, "text");
+  const config = (await h.until("session.update")).session;
+  assert.deepEqual(config.output_modalities, ["text"]);
+  assert.equal(config.audio, undefined);
+  let resolved = false;
+  const result = h.provider.requestApprovedVoiceReply(
+    "Second question", [{ role: "assistant", content: "Previous reply" }],
+    new AbortController().signal, "text",
+  ).then((reply) => { resolved = true; return reply; });
+  const request = await h.until("response.create");
+  assert.deepEqual(request.response.output_modalities, ["text"]);
+  assert.equal(request.response.conversation, "none");
+  assert.equal(request.response.input[0].content[0].text, "Previous reply");
+  assert.equal(request.response.input[1].content[0].text, "Second question");
+  h.send({ type: "response.created", response: { id: "chat-reply", metadata: request.response.metadata } });
+  h.send({ type: "response.output_text.delta", response_id: "chat-reply", delta: "Unapproved partial text" });
+  h.send({ type: "response.done", response: { id: "other-reply", status: "completed" } });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(resolved, false);
+  h.send({ type: "response.done", response: {
+    id: "chat-reply", status: "completed", output: [{
+      type: "message", role: "assistant", content: [{ type: "output_text", text: "Complete reply" }],
+    }],
+  } });
+  assert.deepEqual(await result, { responseId: "chat-reply", audio: "", transcript: "Complete reply" });
+});
 test("provider VAD does not automatically generate responses", async (t) => {
   const h = await harness(t);
   const config = (await h.until("session.update")).session;

@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import type { Observation } from "@mindguard/contracts";
 import { Button, Card, Copy } from "../../shared/ui";
-import { emotionColors, styles } from "../../shared/theme";
+import { styles, useTheme } from "../../shared/theme";
 import { days, emotionCounts } from "./trends";
 
 export function EmotionTrends({ observations, boundaries, day, onDay }: {
@@ -10,6 +10,7 @@ export function EmotionTrends({ observations, boundaries, day, onDay }: {
   day: number | null;
   onDay(day: number | null): void;
 }) {
+  const { emotionColors } = useTheme();
   const ranked = emotionCounts(observations).sort((a, b) => b.count - a.count);
   const leading = ranked.filter((item) => item.count > 0 && item.count === ranked[0].count);
   const daily = days.map((_, i) => observations.filter(

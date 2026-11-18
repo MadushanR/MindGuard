@@ -6,7 +6,7 @@ import { Button, Card, Copy, Intro, ZenOrb } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
 export function WelcomeScreen() {
-  const { desktop } = useBrowserLayout();
+  const { browser, desktop } = useBrowserLayout();
   const copy = screenCopy.welcome;
   const reflection = (
     <Card soft>
@@ -24,7 +24,7 @@ export function WelcomeScreen() {
         onPress={() => router.push(route(2))}
       />
       <Button label="Sign in" onPress={() => router.push(route(3))} />
-      <Copy kind="caption">{copy.note}</Copy>
+      {!browser ? <Copy kind="caption">{copy.note}</Copy> : null}
     </View>
   );
   if (desktop)

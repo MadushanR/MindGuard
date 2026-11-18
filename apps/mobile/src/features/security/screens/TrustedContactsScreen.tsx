@@ -5,13 +5,15 @@ import { Page } from "../../../shared/Page";
 import { Button, Card, Copy, Icon, Intro, Notice } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { ResponsiveGrid } from "../../../shared/responsive";
-import { colors } from "../../../shared/theme";
+import { createThemedStyles, useTheme } from "../../../shared/theme";
 import { useRecipients } from "../RecipientsProvider";
 import { recipientRelationshipLabel } from "../recipients";
 import { useSecuritySessionOptional } from "../SecuritySessionProvider";
 
 export function TrustedContactsScreen() {
   const account = useSecuritySessionOptional();
+  const { mode } = useTheme();
+  const local = screenStyles[mode];
   const { recipients, ready, readError, writeError, saving, restoreRecipients } =
     useRecipients();
   return (
@@ -78,7 +80,7 @@ export function TrustedContactsScreen() {
     </Page>
   );
 }
-const local = StyleSheet.create({
+const screenStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   empty: { alignItems: "center", gap: 16, paddingVertical: 16 },
   person: {
     alignSelf: "center",
@@ -88,4 +90,4 @@ const local = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-});
+}));

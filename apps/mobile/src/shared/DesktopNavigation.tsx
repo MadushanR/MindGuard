@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { route } from "./navigation";
-import { colors, styles } from "./theme";
+import { createThemedStyles, useTheme } from "./theme";
 import { Copy, Icon, MenuRow } from "./ui";
 
 const groups = [
@@ -32,6 +32,8 @@ const groups = [
 ] as const;
 
 export function DesktopNavigation({ path }: { path: string }) {
+  const { mode, colors, styles } = useTheme();
+  const local = navigationStyles[mode];
   return (
     <View
       role="navigation"
@@ -70,7 +72,7 @@ export function DesktopNavigation({ path }: { path: string }) {
   );
 }
 
-const local = StyleSheet.create({
+const navigationStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   sidebar: {
     width: 240,
     borderRightWidth: 1,
@@ -85,4 +87,4 @@ const local = StyleSheet.create({
     gap: 10,
   },
   item: { borderRadius: 14, paddingHorizontal: 12 },
-});
+}));

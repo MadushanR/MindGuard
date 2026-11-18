@@ -16,7 +16,7 @@ import {
 } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
-import { colors } from "../../../shared/theme";
+import { createThemedStyles, useTheme } from "../../../shared/theme";
 import {
   initialRecoveryState,
   recoveryReducer,
@@ -24,6 +24,8 @@ import {
 } from "../accountRecovery";
 
 export function AccountRecoveryScreen() {
+  const { mode } = useTheme();
+  const local = screenStyles[mode];
   const session = useSecuritySessionOptional();
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -113,7 +115,7 @@ export function AccountRecoveryScreen() {
   );
 }
 
-const local = StyleSheet.create({
+const screenStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   layout: { gap: 24 },
   desktop: { flexDirection: "row", alignItems: "flex-start", gap: 48 },
   introduction: { gap: 18, minWidth: 0 },
@@ -121,4 +123,4 @@ const local = StyleSheet.create({
   desktopColumn: { flex: 1 },
   largerField: { fontSize: 17.5, lineHeight: 26.25 },
   invalid: { borderColor: colors["form-error"] },
-});
+}));

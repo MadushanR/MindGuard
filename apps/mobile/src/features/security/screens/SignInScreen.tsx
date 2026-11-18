@@ -18,7 +18,7 @@ import {
 } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
-import { colors } from "../../../shared/theme";
+import { createThemedStyles, useTheme } from "../../../shared/theme";
 import {
   initialSignInState,
   signInReducer,
@@ -27,6 +27,8 @@ import {
 } from "../signIn";
 
 export function SignInScreen() {
+  const { mode } = useTheme();
+  const local = screenStyles[mode];
   const navigation = useRouter();
   const session = useSecuritySessionOptional();
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,6 @@ export function SignInScreen() {
     Keyboard.dismiss();
     const valid = Object.keys(validateSignIn(state.fields)).length === 0;
     dispatch({ type: "submit" });
-    // A local UI simulation only; no account session or stored identity is created.
     if (valid) {
       setWorking(true); setError(null);
       try {
@@ -121,7 +122,7 @@ export function SignInScreen() {
             />
           </Card>
           <Copy kind="muted">{copy.passwordHint}</Copy>
-          <Notice>{session ? "Sign in once for your account, sharing and voice. Credentials stay in memory for this session." : copy.demoNotice}</Notice>
+          <Notice>{session ? "Sign in once for your account, sharing, chat and voice. Credentials stay in memory for this session." : copy.demoNotice}</Notice>
           {error || session?.error ? <Notice error>{error ?? session?.error}</Notice> : null}
           <Button label="Sign in" kind="primary" disabled={working || session?.busy} onPress={() => void submit()} />
           <Copy center kind="muted">
@@ -147,7 +148,7 @@ export function SignInScreen() {
   );
 }
 
-const local = StyleSheet.create({
+const screenStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   layout: { gap: 24 },
   desktop: { flexDirection: "row", alignItems: "flex-start", gap: 48 },
   introduction: { gap: 18 },
@@ -156,4 +157,4 @@ const local = StyleSheet.create({
   desktopForm: { flex: 1 },
   largerField: { fontSize: 17.5, lineHeight: 26.25 },
   invalid: { borderColor: colors["form-error"] },
-});
+}));

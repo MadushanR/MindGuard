@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { Copy, Icon } from "../../shared/ui";
-import { colors } from "../../shared/theme";
+import { useTheme } from "../../shared/theme";
 
 export function InformationCheckbox({ label, description, checked, disabled, onChange }: {
   label: string;
@@ -10,6 +10,7 @@ export function InformationCheckbox({ label, description, checked, disabled, onC
   disabled: boolean;
   onChange(): void;
 }) {
+  const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   return (
     <Pressable accessibilityRole="checkbox" accessibilityLabel={label}
@@ -34,7 +35,7 @@ export function InformationCheckbox({ label, description, checked, disabled, onC
         local.row, disabled && { opacity: 0.6 }, pressed && { opacity: 0.75 },
         focused && { outlineColor: colors.focus, outlineWidth: 2, outlineOffset: 3 },
       ]}>
-      <View style={[local.box, checked && { backgroundColor: colors.teal }]}>
+      <View style={[local.box, { borderColor: colors.teal }, checked && { backgroundColor: colors.teal }]}>
         {checked ? <Icon name="check" color={colors["on-primary"]} size={18} /> : null}
       </View>
       <View style={local.text}>
@@ -46,6 +47,6 @@ export function InformationCheckbox({ label, description, checked, disabled, onC
 }
 const local = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 14, minHeight: 60, paddingVertical: 10, borderRadius: 8 },
-  box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.teal, alignItems: "center", justifyContent: "center" },
+  box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   text: { flex: 1, minWidth: 0, gap: 4 },
 });

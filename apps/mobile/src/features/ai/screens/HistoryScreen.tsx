@@ -17,7 +17,7 @@ import { route } from "../../../shared/navigation";
 import { styles } from "../../../shared/theme";
 import { ResponsiveGrid, useBrowserLayout } from "../../../shared/responsive";
 export function HistoryScreen() {
-  const { desktop } = useBrowserLayout();
+  const { browser, desktop } = useBrowserLayout();
   const ai = useAI(),
     copy = screenCopy.history,
     [deleting, setDeleting] = useState<string[] | null>(null),
@@ -36,18 +36,17 @@ export function HistoryScreen() {
           label="New conversation"
           kind="primary"
           onPress={() => {
-            ai.newConversation();
             router.push(route(6));
           }}
         />
-        <Button
-          label="Temporary chat"
+        {!browser ? <Button
+          label="Temporary demo chat"
           icon="lock"
           onPress={() => {
             ai.newConversation(true);
-            router.push(route(6));
+            router.push({ pathname: "/chat", params: { mode: "demo" } });
           }}
-        />
+        /> : null}
       </View>
       <MenuRow
         label="History and auto-delete"
@@ -60,7 +59,7 @@ export function HistoryScreen() {
       />
       {ai.model.saved.conversations.length ? (
         <>
-          <Copy kind="heading">Saved conversations</Copy>
+          <Copy kind="heading">Saved demo conversations</Copy>
           <ResponsiveGrid>
             {[...ai.model.saved.conversations]
               .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -72,14 +71,14 @@ export function HistoryScreen() {
                   </Copy>
                   <Copy kind="heading">{c.title}</Copy>
                   <Copy kind="muted">{c.messages.at(-1)?.text}</Copy>
-                  <Button
+                  {!browser ? <Button
                     label={`Continue: ${c.title}`}
                     kind="text"
                     onPress={() => {
                       ai.openConversation(c.id);
-                      router.push(route(6));
+                      router.push({ pathname: "/chat", params: { mode: "demo" } });
                     }}
-                  />
+                  /> : null}
                   <Button
                     label="Delete conversation"
                     kind="danger"

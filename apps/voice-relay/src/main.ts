@@ -14,7 +14,7 @@ import {
   VoiceError,
   processVoiceTurn,
 } from "@mindguard/voice-core";
-import { CognitoVoiceAccess, type Principal } from "./access.js";
+import { CognitoVoiceAccess, processingDisclosure, type Principal } from "./access.js";
 import { OpenAIConversationAdapter } from "./realtime.js";
 import { loadApprovedPolicy } from "./policy.js";
 import { DynamoSecurityStore, SecurityApplication, SecurityError, securityRouter } from "./security.js";
@@ -69,7 +69,7 @@ app.use(express.json({ limit: "40kb" }));
 const api = express.Router();
 type AuthRequest = Request & { principal?: Principal };
 const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (!access || (missing.length && req.path !== "/consent"))
+  if (!access || (missing.length && !["/consent", "/chat/consent"].includes(req.path)))
     return res.status(503).json({ code: "SERVICE_NOT_CONFIGURED" });
   const token = req.headers.authorization?.match(/^Bearer ([^\s]+)$/)?.[1];
   if (!token) return res.status(401).json({ code: "AUTH_REQUIRED" });
@@ -89,8 +89,9 @@ const sessions = new Map<
     bound: boolean;
     context: { role: "user" | "assistant"; content: string }[];
     shutdown?: () => void;
-    kind?: "voice" | "text";
+    kind?: "text" | "chat";
     busy?: boolean;
+    chatTurns?: number;
   }
 >();
 api.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -100,32 +101,35 @@ api.get("/ready", (_req, res) =>
     .json({ ready: !missing.length, missing }),
 );
 api.use(auth);
-api.get("/consent", async (req: AuthRequest, res, next) => {
-  try {
-    res.json({
-      allowed: await access!.consent(req.principal!.owner),
-      disclosure: "voice-processing-v1",
-    });
-  } catch (e) {
-    next(e);
-  }
-});
-api.put("/consent", async (req: AuthRequest, res, next) => {
-  try {
-    if (
-      typeof req.body.allowed !== "boolean" ||
-      req.body.disclosure !== "voice-processing-v1"
-    )
-      return res.status(400).json({ code: "INVALID_CONSENT" });
-    await access!.setConsent(req.principal!.owner, req.body.allowed);
-    if (!req.body.allowed)
-      for (const s of sessions.values())
-        if (s.principal.owner === req.principal!.owner) s.shutdown?.();
-    res.json({ allowed: req.body.allowed });
-  } catch (e) {
-    next(e);
-  }
-});
+api.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
+for (const purpose of ["voice", "chat"] as const) {
+  const path = purpose === "chat" ? "/chat/consent" : "/consent";
+  api.get(path, async (req: AuthRequest, res, next) => {
+    try {
+      res.json({
+        allowed: await access!.consent(req.principal!.owner, purpose),
+        disclosure: processingDisclosure[purpose],
+      });
+    } catch (error) { next(error); }
+  });
+  api.put(path, async (req: AuthRequest, res, next) => {
+    try {
+      const { allowed, disclosure } = req.body ?? {};
+      if (typeof allowed !== "boolean" || disclosure !== processingDisclosure[purpose])
+        return res.status(400).json({ code: "INVALID_CONSENT" });
+      const owner = req.principal!.owner;
+      await access!.setConsent(owner, allowed, purpose);
+      if (!allowed)
+        for (const s of sessions.values())
+          if (s.principal.owner === owner && (s.kind === "chat") === (purpose === "chat")) {
+            s.session.stop();
+            s.shutdown?.();
+            sessions.delete(s.session.id);
+          }
+      res.json({ allowed });
+    } catch (error) { next(error); }
+  });
+}
 api.post("/sessions", async (req: AuthRequest, res, next) => {
   try {
     if (missing.length || !policy) return res.status(503).json({ code: "SERVICE_NOT_CONFIGURED" });
@@ -133,7 +137,7 @@ api.post("/sessions", async (req: AuthRequest, res, next) => {
     await access!.check(p.owner, p.expiresAt);
     if (
       [...sessions.values()].some(
-        (s) => s.principal.owner === p.owner && s.session.isActive(),
+        (s) => s.kind !== "chat" && s.principal.owner === p.owner && s.session.isActive(),
       )
     )
       throw new VoiceError("SESSION_ALREADY_ACTIVE");
@@ -155,6 +159,22 @@ api.post("/sessions", async (req: AuthRequest, res, next) => {
     next(e);
   }
 });
+api.post("/chat/sessions", async (req: AuthRequest, res, next) => {
+  try {
+    const p = req.principal!;
+    await access!.check(p.owner, p.expiresAt, "chat");
+    await access!.reserveSession(p.owner, Number(process.env.DAILY_SESSION_LIMIT ?? 10), "chat");
+    await access!.check(p.owner, p.expiresAt, "chat");
+    if (res.destroyed) return;
+    if (sessions.size >= Number(process.env.MAX_CONCURRENT_SESSIONS ?? 20))
+      throw new VoiceError("CAPACITY_REACHED");
+    const id = randomUUID();
+    const expiresAt = Math.min(Date.now() + Number(process.env.SESSION_DURATION_MS ?? 600000), p.expiresAt);
+    const session = new ConversationSession(id, p.owner, expiresAt);
+    sessions.set(id, { session, principal: p, bound: true, context: [], kind: "chat", chatTurns: 0 });
+    res.status(201).json({ sessionId: id, expiresAt });
+  } catch (error) { next(error); }
+});
 api.delete("/sessions/:id", async (req: AuthRequest, res, next) => {
   try {
     const s = sessions.get(String(req.params.id));
@@ -172,7 +192,7 @@ api.delete("/sessions/:id", async (req: AuthRequest, res, next) => {
 api.post("/sessions/:id/handoff", async (req: AuthRequest, res, next) => {
   try {
     const p = req.principal!, source = sessions.get(String(req.params.id));
-    if (!source || source.kind === "text") throw new VoiceError("SESSION_UNAVAILABLE");
+    if (!source || source.kind) throw new VoiceError("SESSION_UNAVAILABLE");
     source.session.assertOwner(p.owner);
     await access!.check(p.owner, p.expiresAt);
     if (!source.session.isActive()) throw new VoiceError("SESSION_EXPIRED");
@@ -192,17 +212,31 @@ api.post("/sessions/:id/text", async (req: AuthRequest, res, next) => {
   let current: ReturnType<typeof sessions.get>;
   let acquired = false;
   const abort = new AbortController();
-  const disconnected = () => { if (!res.writableEnded) { abort.abort(); current?.session.cancel(); provider?.close(); } };
+  const disconnected = () => {
+    if (!res.writableEnded) {
+      abort.abort();
+      if (acquired) current?.session.cancel();
+      provider?.close();
+    }
+  };
   res.once("close", disconnected);
   try {
     const p = req.principal!;
     current = sessions.get(String(req.params.id));
-    if (!current || current.kind !== "text") throw new VoiceError("SESSION_UNAVAILABLE");
+    if (!current?.kind) throw new VoiceError("SESSION_UNAVAILABLE");
     current.session.assertOwner(p.owner);
-    await access!.check(p.owner, p.expiresAt);
+    const purpose = current.kind === "chat" ? "chat" : "voice";
+    await access!.check(p.owner, p.expiresAt, purpose);
+    if (abort.signal.aborted) return;
+    if (!current.session.isActive()) throw new VoiceError("SESSION_EXPIRED");
     if (current.busy) throw new VoiceError("TURN_ALREADY_ACTIVE");
-    if (typeof req.body.text !== "string" || !req.body.text.trim() || req.body.text.length > 8000)
+    const textInput = req.body?.text;
+    if (typeof textInput !== "string" || !textInput.trim() || textInput.length > 8000)
       throw new VoiceError("INVALID_TRANSCRIPT");
+    if (current.chatTurns !== undefined) {
+      if (current.chatTurns >= 20) throw new VoiceError("CHAT_TURN_LIMIT");
+      current.chatTurns++;
+    }
     current.busy = true;
     acquired = true;
     const target = current;
@@ -216,18 +250,24 @@ api.post("/sessions/:id/text", async (req: AuthRequest, res, next) => {
     provider.on("failure", () => abort.abort());
     // Keep input safety ahead of the provider connection as well as generation.
     const inputDecision = policy!.validateVoiceTurn(target.session, {
-      sessionId: target.session.id, turnId, transcript: req.body.text, completed: true, interrupted: false,
+      sessionId: target.session.id, turnId, transcript: textInput, completed: true, interrupted: false,
     }, generation);
     if (inputDecision.route !== "PERMITTED") {
       target.shutdown();
       return res.json({ route: inputDecision.route });
     }
-    await provider.openControlledVoice();
+    const modality = purpose === "chat" ? "text" : "audio";
+    const adapter = provider;
+    await adapter.openControlledVoice(modality);
     const result = await processVoiceTurn({
       session: target.session, generation,
-      turn: { sessionId: target.session.id, turnId, transcript: req.body.text, completed: true, interrupted: false },
-      policy: policy!, access: { check: () => access!.check(p.owner, p.expiresAt) },
-      provider, context: target.context, signal: abort.signal,
+      turn: { sessionId: target.session.id, turnId, transcript: textInput, completed: true, interrupted: false },
+      policy: policy!, access: { check: () => access!.check(p.owner, p.expiresAt, purpose) },
+      provider: {
+        requestApprovedVoiceReply: (text, context, signal) => adapter.requestApprovedVoiceReply(text, context, signal, modality),
+        cancelPendingReply: () => adapter.cancelPendingReply(),
+      },
+      context: target.context, signal: abort.signal,
     });
     if (abort.signal.aborted || !target.session.isCurrent(turnId, generation)) throw new VoiceError("STALE_TURN");
     if (!result.candidate) {
@@ -235,9 +275,8 @@ api.post("/sessions/:id/text", async (req: AuthRequest, res, next) => {
       return res.json({ route: result.decision.route });
     }
     const text = result.candidate.transcript;
-    target.context.push({ role: "user", content: req.body.text }, { role: "assistant", content: text });
+    target.context.push({ role: "user", content: textInput }, { role: "assistant", content: text });
     target.context = target.context.slice(-6);
-    // Audio is checked but intentionally discarded during the text handoff.
     res.json({ text, sessionId: target.session.id });
   } catch (error) { next(error); }
   finally {

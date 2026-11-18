@@ -1,6 +1,6 @@
 import { useRef, useState, type ComponentRef } from "react";
-import { router } from "expo-router";
-import { ScrollView, TextInput, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Platform, ScrollView, TextInput, View } from "react-native";
 import { chatContent, screenCopy } from "@mindguard/fixtures";
 import { useAI } from "../AIProvider";
 import {
@@ -13,16 +13,20 @@ import {
   Notice,
   ZenOrb,
 } from "../../../shared/ui";
-import { colors, styles } from "../../../shared/theme";
+import { useTheme } from "../../../shared/theme";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
 import { useLiveVoiceOptional } from "../live/LiveVoiceProvider";
 import { VoiceTextScreen } from "../live/VoiceTextScreen";
+import { LiveChatScreen } from "../live/LiveChatScreen";
 export function ChatScreen() {
   const live = useLiveVoiceOptional();
-  return live?.handoff || live?.textMode ? <VoiceTextScreen /> : <SimulationChatScreen />;
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  if (Platform.OS !== "web" && mode === "demo") return <SimulationChatScreen />;
+  return live?.handoff || live?.textMode ? <VoiceTextScreen /> : <LiveChatScreen />;
 }
 function SimulationChatScreen() {
+  const { colors, styles } = useTheme();
   const { desktop } = useBrowserLayout();
   const ai = useAI(),
     [draft, setDraft] = useState(""),
@@ -49,6 +53,7 @@ function SimulationChatScreen() {
       ]}
     >
       <View style={{ paddingHorizontal: 26, paddingBottom: 12, gap: 6 }}>
+        <Copy kind="caption">Demo chat · simulated replies</Copy>
         <View style={styles.spread}>
           <View
             style={[styles.row, { flex: 1, flexWrap: "nowrap", minWidth: 0 }]}

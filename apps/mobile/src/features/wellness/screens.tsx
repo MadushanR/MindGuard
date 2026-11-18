@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, View } from "react-native";
+import { AppState, Platform, View } from "react-native";
 import * as Linking from "expo-linking";
 import { wellnessResources } from "@mindguard/fixtures";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -18,9 +18,10 @@ import {
   Toggle,
   ZenOrb,
 } from "../../shared/ui";
-import { colors, styles } from "../../shared/theme";
+import { styles, useTheme } from "../../shared/theme";
 import { destination, route } from "../../shared/navigation";
 import { ObservationCard, useAI } from "../ai";
+import { useLiveVoiceOptional } from "../ai/live/LiveVoiceProvider";
 import { useRecipients, useSharedInformation, type ShareErrorCode } from "../security";
 import trustedContactCopy from "../../../../../packages/fixtures/security/trusted-contacts.json";
 import sharedInformationCopy from "../../../../../packages/fixtures/security/shared-information.json";
@@ -95,6 +96,7 @@ export function HomeScreen() {
   );
 }
 export function TrendsScreen() {
+  const { colors } = useTheme();
   const ai = useAI();
   const w = useWellness();
   const [period, setPeriod] = useState<Period>("This week");
@@ -291,6 +293,7 @@ export function SourcesScreen() {
   );
 }
 export function WatchScreen() {
+  const { colors } = useTheme();
   const w = useWellness();
   const { watch, setWatch } = w;
   const [name, setName] = useState(w.device),
@@ -396,6 +399,8 @@ export function WatchScreen() {
   );
 }
 export function ResourcesScreen() {
+  const liveAccount = useLiveVoiceOptional();
+  const showMemberLinks = Platform.OS !== "web" || liveAccount?.signedIn;
   const [pending, setPending] = useState<{ label: string; url: string } | null>(null);
   const [linkError, setLinkError] = useState("");
   const open = async (url: string) => {
@@ -421,23 +426,26 @@ export function ResourcesScreen() {
       </Card>)}
       <Notice>{wellnessResources.offline}</Notice>
       {linkError ? <Notice error>{linkError}</Notice> : null}
-      <Card>
-        <Copy kind="heading">Support contacts</Copy>
-        <Copy kind="muted">
-          Manage support contacts in Trusted Contacts. Adding a sharing
-          recipient does not create a trusted
-          contact.
-        </Copy>
-        <Link id={12} />
-      </Card>
-      <Card>
-        <Copy kind="heading">Wellness suggestions</Copy>
-        <Copy kind="muted">
-          Existing illustrative guides and videos are separate from crisis
-          resources. They are not reviewed crisis support.
-        </Copy>
-        <Link id={21} label="Explore wellness suggestions" />
-      </Card>
+      {showMemberLinks ? (
+        <>
+          <Card>
+            <Copy kind="heading">Support contacts</Copy>
+            <Copy kind="muted">
+              Manage support contacts in Trusted Contacts. Adding a sharing
+              recipient does not create a trusted contact.
+            </Copy>
+            <Link id={12} />
+          </Card>
+          <Card>
+            <Copy kind="heading">Wellness suggestions</Copy>
+            <Copy kind="muted">
+              Existing illustrative guides and videos are separate from crisis
+              resources. They are not reviewed crisis support.
+            </Copy>
+            <Link id={21} label="Explore wellness suggestions" />
+          </Card>
+        </>
+      ) : null}
       {pending ? <Dialog title="Open another app?" onClose={() => setPending(null)}>
         <Copy>{pending.label} opens your phone or messaging app. MindGuard does not place a call, send a message, or attach your records automatically.</Copy>
         <Button label="Continue to phone or messaging app" kind="primary" onPress={() => { const url = pending.url; setPending(null); void open(url); }} />
@@ -844,7 +852,7 @@ export function SettingsScreen() {
         <Dialog
           title={
             action === "signout"
-              ? account ? "Sign out?" : "Leave the demo?"
+              ? account ? "Sign out of MindGuard?" : "Leave the demo?"
               : action === "reset" ? "Reset wellness session?"
                 : account?.snapshot?.accountDeletionAvailable ? "Delete your account?" : "Account deletion unavailable"
           }
