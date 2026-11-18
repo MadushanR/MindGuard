@@ -11,6 +11,7 @@ import {
   RecipientsProvider, SharedInformationProvider, useSharedInformation,
 } from "..";
 import { normalizeShare, sharedInformationReducer } from "../sharedInformation";
+import { PRIVACY_STORAGE_KEY } from "../privacy";
 import { SharedInformationScreen } from "../screens/SharedInformationScreen";
 import samples from "../../../../../../packages/fixtures/security/shared-information-records.json";
 import copy from "../../../../../../packages/fixtures/security/shared-information.json";
@@ -94,13 +95,17 @@ test("review shows exact content; revocation requires confirmation and removes o
   await fireEvent.press(screen.getByLabelText("Cancel"));
   expect(shares.records).toHaveLength(2);
   await fireEvent.press(screen.getByLabelText("Revoke access for Alex Demo"));
+  expect(screen.getByText(copy.copiesNotice)).toBeTruthy();
   await fireEvent.press(screen.getByLabelText("Confirm revoke access"));
-  expect(shares.records).toHaveLength(1);
+  // The record stays, marked pending, until the simulated service confirms revocation.
+  expect(shares.records).toHaveLength(2);
+  expect(screen.getByText(copy.revokePending)).toBeTruthy();
+  await waitFor(() => expect(shares.records).toHaveLength(1));
   expect(screen.queryByText("Alex Demo")).toBeNull();
   expect(screen.getByText("Sam Example")).toBeTruthy();
   await fireEvent.press(screen.getByLabelText("Revoke access for Sam Example"));
   await fireEvent.press(screen.getByLabelText("Confirm revoke access"));
-  expect(screen.getByText(copy.emptyTitle)).toBeTruthy();
+  await waitFor(() => expect(screen.getByText(copy.emptyTitle)).toBeTruthy());
 });
 
 test("Screen 13 records only confirmed recipient shares; export and cancel do not add records; reset confirms before clearing", async () => {
@@ -122,16 +127,24 @@ test("Screen 13 records only confirmed recipient shares; export and cancel do no
   await fireEvent.changeText(screen.getByLabelText("Relationship"), "Friend");
   await fireEvent.press(screen.getByLabelText("Save recipient"));
   await view.rerender(<WellnessScreen id={13} />);
+  // Recipient sharing now requires the Screen 16 Sharing preference.
+  await AsyncStorage.setItem(PRIVACY_STORAGE_KEY, JSON.stringify({ version: 1, preferences: {
+    wellnessData: false, saveSummaries: false, sharing: true, contactNotifications: false,
+  } }));
   await fireEvent.press(screen.getByLabelText("Preview selected content"));
+  await screen.findByLabelText("Confirm simulated action");
   await fireEvent.press(screen.getByLabelText("Cancel"));
   expect(shares.records).toHaveLength(0);
   await fireEvent.press(screen.getByLabelText("Preview selected content"));
-  const previewText = screen.getByText(/Steps: 5200/).props.children;
+  await screen.findByLabelText("Confirm simulated action");
+  const previewText = [screen.getByText(/^Source: synthetic demo records/), screen.getByText(/Steps: 5200/)]
+    .map((node) => node.props.children);
   await fireEvent.press(screen.getByLabelText("Confirm simulated action"));
-  expect(shares.records).toHaveLength(1);
+  await waitFor(() => expect(shares.records).toHaveLength(1));
   expect(shares.records[0].recipientName).toBe("Alex Demo");
-  expect(shares.records[0].content).toEqual([previewText]);
+  expect(shares.records[0].content).toEqual(previewText);
   expect(JSON.stringify(shares.records)).not.toContain("alex@example.com");
+  await AsyncStorage.removeItem(PRIVACY_STORAGE_KEY);
   await view.rerender(<WellnessScreen id={18} />);
   await fireEvent.press(screen.getByLabelText("Reset wellness session"));
   await fireEvent.press(screen.getByLabelText("Cancel"));

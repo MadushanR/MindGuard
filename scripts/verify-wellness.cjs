@@ -58,14 +58,45 @@ const base = process.env.MINDGUARD_URL || 'http://localhost:8081';
     await page.getByLabel('Email', { exact: true }).fill('alex.example@example.test');
     await b('Save recipient').click();
     assert.equal(await sw('Steps').isChecked(), true);
+    // UC-10: recipient sharing is refused until the Screen 16 Sharing preference is saved.
+    await b('Preview selected content').click();
+    await text('Sharing is turned off in Privacy and consent');
+    assert.equal(await b('Confirm simulated action').count(), 0);
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+    await explore('16 Privacy and Consent');
+    await sw('Sharing').check();
+    await b('Save preferences').click();
+    await text('Privacy preferences saved on this device.');
+    await explore('13 Export and Share Preview');
+    assert.equal(await sw('Steps').isChecked(), true);
     await b('Preview selected content').click();
     await text('alex.example@example.test');
     await text('5200, 6100, 4800, 7200, 6500, 8100, 5600');
+    await text('Source: synthetic demo records');
     const dialog = page.getByRole('dialog');
     await page.keyboard.press('Tab');
     assert.equal(await dialog.evaluate(el => el.contains(document.activeElement)), true);
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
+    await sw('Simulate sharing service failure').check();
+    await b('Preview selected content').click();
+    await b('Confirm simulated action').click();
+    await text('The simulated sharing service is unavailable');
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+    await sw('Simulate sharing service failure').uncheck();
+    await b('Preview selected content').click();
+    await b('Confirm simulated action').click();
+    await text('Simulated share confirmed for Alex Example With A Long Family Name');
+    await b('View shared information').click();
+    await text('Simulated share · This session');
+    await b('Revoke access for Alex Example With A Long Family Name').click();
+    await text('cannot be recalled');
+    await b('Confirm revoke access').click();
+    await text('Demo access revoked.');
+    await text('Nothing shared yet.');
+    checks.push('UC-10: consent denial, Screen 16 consent, exact preview with source label, simulated failure, confirmed simulated share, Screen 14 review and confirmed simulated revocation');
+    await explore('13 Export and Share Preview');
+    await b('Demo export preview').click();
     await b('Preview selected content').click();
     await b('Confirm simulated action').click();
     await text('Simulation complete. No information was sent');
@@ -129,9 +160,9 @@ const base = process.env.MINDGUARD_URL || 'http://localhost:8081';
     for (const large of [false, true]) {
       await explore('18 Settings and Account');
       if (large) await sw('Larger text').check(); else await sw('Larger text').uncheck();
-      for (const width of [320, 390, 430, 1440]) {
+      for (const width of [320, 390, 430, 900, 1440]) {
       await page.setViewportSize({ width, height: 844 });
-      for (const path of ['home', 'trends', 'data-sources', 'resources', 'export-share', 'settings', 'connect-smartwatch', 'add-recipient']) {
+      for (const path of ['home', 'trends', 'data-sources', 'resources', 'export-share', 'settings', 'connect-smartwatch', 'add-recipient', 'shared-information']) {
         await page.goto(base + '/' + path);
         await b('Explore').waitFor();
         await page.waitForFunction(() => !document.body.innerText.includes('Opening your space'));
@@ -142,9 +173,9 @@ const base = process.env.MINDGUARD_URL || 'http://localhost:8081';
       }
       }
     }
-    checks.push('64 screen/viewport/text-size combinations at 320/390/430/1440px: no horizontal overflow; lower Settings/form actions reachable');
+    checks.push('90 screen/viewport/text-size combinations at 320/390/430/900/1440px: no horizontal overflow; lower Settings/form actions reachable');
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const path of ['home', 'trends', 'settings', 'add-recipient']) {
+    for (const path of ['home', 'trends', 'settings', 'add-recipient', 'export-share']) {
       await page.goto(base + '/' + path);
       await b('Explore').waitFor();
       await page.waitForFunction(() => !document.body.innerText.includes('Opening your space'));

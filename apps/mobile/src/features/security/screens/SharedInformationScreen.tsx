@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentRef } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import copy from "../../../../../../packages/fixtures/security/shared-information.json";
@@ -12,9 +12,23 @@ export function SharedInformationScreen() {
   const { records, revokeShare } = useSharedInformation();
   const [dialog, setDialog] = useState<{ id: string; kind: "review" | "revoke" } | null>(null);
   const [revoked, setRevoked] = useState(false);
+  const [revokeError, setRevokeError] = useState<"failed" | "unknown" | null>(null);
   const shareButton = useRef<ComponentRef<typeof View>>(null);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
   const selected = records.find((record) => record.id === dialog?.id);
-  const close = () => setDialog(null);
+  const close = () => { setDialog(null); setRevokeError(null); };
+  const confirmRevoke = async (id: string) => {
+    setRevokeError(null);
+    setRevoked(false);
+    const result = await revokeShare(id);
+    if (!mounted.current || result.status === "stale" || result.status === "pending") return;
+    if (result.status === "complete") {
+      setDialog(null);
+      setRevoked(true);
+      requestAnimationFrame(() => shareButton.current?.focus());
+    } else setRevokeError(result.status === "unknown" ? "unknown" : "failed");
+  };
   return (
     <Page wide>
       <View style={local.intro}>
@@ -30,16 +44,22 @@ export function SharedInformationScreen() {
                 <Copy kind="heading">{record.recipientName}</Copy>
                 <Copy kind="muted">{new Date(record.createdAt).toLocaleString()}</Copy>
                 <Copy kind="caption">{copy.demoLabel}</Copy>
+                {record.revocation ? (
+                  <Copy kind="caption">
+                    {record.revocation === "pending" ? copy.revokePendingLabel : copy.revokeFailedLabel}
+                  </Copy>
+                ) : null}
                 <Button
                   label="Review"
                   accessibilityLabel={`Review share with ${record.recipientName}`}
                   onPress={() => setDialog({ id: record.id, kind: "review" })}
                 />
                 <Button
-                  label="Revoke access"
+                  label={record.revocation === "pending" ? "Revoking…" : "Revoke access"}
                   accessibilityLabel={`Revoke access for ${record.recipientName}`}
                   kind="danger"
-                  onPress={() => setDialog({ id: record.id, kind: "revoke" })}
+                  disabled={record.revocation === "pending"}
+                  onPress={() => { setRevokeError(null); setDialog({ id: record.id, kind: "revoke" }); }}
                 />
               </Card>
             ))}
@@ -72,12 +92,17 @@ export function SharedInformationScreen() {
           ) : (
             <>
               <Copy>{copy.revokeDescription}</Copy>
-              <Button label="Confirm revoke access" kind="danger" onPress={() => {
-                revokeShare(selected.id);
-                close();
-                setRevoked(true);
-                requestAnimationFrame(() => shareButton.current?.focus());
-              }} />
+              <Copy kind="caption">{copy.copiesNotice}</Copy>
+              {selected.revocation === "pending" ? <Notice>{copy.revokePending}</Notice> : null}
+              {revokeError ? (
+                <Notice error>{revokeError === "unknown" ? copy.revokeUnknown : copy.revokeFailed}</Notice>
+              ) : null}
+              <Button
+                label={selected.revocation === "pending" ? "Revoking…" : revokeError ? "Try revoking again" : "Confirm revoke access"}
+                kind="danger"
+                disabled={selected.revocation === "pending"}
+                onPress={() => { void confirmRevoke(selected.id); }}
+              />
             </>
           )}
         </Dialog>

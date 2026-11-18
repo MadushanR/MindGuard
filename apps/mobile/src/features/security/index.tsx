@@ -7,8 +7,20 @@ export {
   SharedInformationProvider,
   useSharedInformation,
   type SharedInformationContextValue,
+  type ShareSubmitResult,
+  type RevokeResult,
 } from "./SharedInformationProvider";
-export type { ShareInput, SharedInformationRecord } from "./sharedInformation";
+export type { ShareInput, SharedInformationRecord, RevocationState } from "./sharedInformation";
+export {
+  createSimulatedSharingService,
+  type SharingService,
+  type SimulatedSharingService,
+  type ShareErrorCode,
+  type ShareServiceRequest,
+  type ShareServiceResult,
+  type RevokeServiceResult,
+} from "./sharingService";
+export { readSharingConsent } from "./sharingConsent";
 export {
   RecipientsProvider,
   useRecipients,
