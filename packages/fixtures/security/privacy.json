@@ -3,7 +3,7 @@
   "description": "Separate permissions. Change them at any time.",
   "draftNotice": "Changes take effect when you save. Leaving this screen discards unsaved changes. Turning a permission off does not delete existing saved information.",
   "toneNotice": "Enable voice processing before optional tone analysis. Turning voice processing off also turns tone analysis off.",
-  "demoNotice": "Local demo preferences: wellness data, save summaries, sharing, and notifications to contacts are saved choices only. They do not control the current demo flows. Summaries are not generated, and no data sources, sharing services, or notifications are connected.",
+  "demoNotice": "Local demo preferences: wellness data, save summaries, sharing, and notifications to contacts are saved on this device only. Sharing must be on before Export and Share can confirm a simulated recipient share. The other three do not control the current demo flows. Summaries are not generated, and no data sources, sharing services, or notifications are connected.",
   "voice": { "label": "Voice processing", "description": "Use your voice to talk with Zen." },
   "chatObservations": { "label": "Chat emotion observations", "description": "Include estimated emotions from chat in Trends." },
   "tone": { "label": "Optional tone analysis", "description": "Include estimated emotions from your voice. You can correct them." },

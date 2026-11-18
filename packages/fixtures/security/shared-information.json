@@ -6,8 +6,15 @@
   "sessionNotice": "These are sharing simulations from this session. No information was sent. Records clear when the app reloads or you confirm a session reset or leave the demo.",
   "reviewTitle": "Review shared information",
   "revokeTitle": "Revoke access?",
-  "revokeDescription": "This removes the selected demo share from this session. No real access is changed. Source wellness data and saved information stay unchanged.",
+  "revokeDescription": "This asks the simulated sharing service to end access to the selected demo share. It is removed from this list only after the service confirms. No real access is changed. Source wellness data and saved information stay unchanged.",
+  "copiesNotice": "Revoking stops future access only. Information a recipient already downloaded, copied or forwarded cannot be recalled.",
+  "revokePending": "Waiting for the simulated sharing service to confirm revocation. Access is unchanged until it confirms.",
+  "revokePendingLabel": "Revocation pending · access unchanged until confirmed",
+  "revokeFailedLabel": "Revocation failed · access unchanged",
+  "revokeUnknownLabel": "Revocation outcome unknown · access may or may not have ended",
+  "revokeFailed": "The simulated sharing service could not revoke this share. Access is unchanged. Try again.",
+  "revokeUnknown": "No response from the simulated sharing service, so the outcome is unknown: access may or may not have ended. Trying again is safe and reuses the same request.",
   "revokedNotice": "Demo access revoked. The selected share has been removed.",
   "demoLabel": "Simulated share · This session",
-  "previewNotice": "This confirms a demo action only. Recipient-sharing confirmations appear in Shared Information for this session. Export previews are not recorded there. No information is sent."
+  "previewNotice": "This confirms a simulated share only. Nothing is sent and no recipient receives anything. A confirmed recipient share appears in Shared Information for this session. Export previews are not recorded there."
 }

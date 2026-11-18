@@ -21,7 +21,7 @@ import {
 import { colors, styles } from "../../shared/theme";
 import { destination, route } from "../../shared/navigation";
 import { ObservationCard, useAI } from "../ai";
-import { useRecipients, useSharedInformation } from "../security";
+import { useRecipients, useSharedInformation, type ShareErrorCode } from "../security";
 import trustedContactCopy from "../../../../../packages/fixtures/security/trusted-contacts.json";
 import sharedInformationCopy from "../../../../../packages/fixtures/security/shared-information.json";
 import { EmotionTrends } from "./EmotionTrends";
@@ -31,8 +31,9 @@ import {
   metrics,
   recipientErrors,
   useWellness,
-  type Metric,
 } from "./state";
+import { destinationText, sharePeriod, type SharePreview } from "./sharing";
+import { useShareWorkflow } from "./useShareWorkflow";
 
 const go = (id: ScreenId) => router.push(route(id));
 function Link({ id, label }: { id: ScreenId; label?: string }) {
@@ -443,41 +444,43 @@ export function ResourcesScreen() {
     </Page>
   );
 }
-function selectedContent(selected: Metric[]) {
-  return selected.map(
-    (m) =>
-      `${metricInfo[m].label}: ${metricInfo[m].values.join(", ")} ${metricInfo[m].unit} (Mon–Sun); daily average ${(metricInfo[m].values.reduce((a, b) => a + b, 0) / 7).toFixed(m === "steps" ? 0 : 1)} ${metricInfo[m].unit}.`,
+const shareErrors: Record<ShareErrorCode, string> = {
+  UNAVAILABLE: "The simulated sharing service is unavailable. Nothing was shared. Your selections are kept; try again.",
+  CONFLICT: "This request no longer matches what was submitted earlier. Nothing new was shared. Cancel and preview again.",
+  INVALID: "The simulated sharing service rejected this content. Nothing was shared. Cancel and update your selection.",
+};
+function SharePreviewDetails({ preview }: { preview: SharePreview }) {
+  return (
+    <>
+      <Copy kind="heading">Destination</Copy>
+      <Copy>{destinationText(preview.destination)}</Copy>
+      <Copy kind="heading">Content</Copy>
+      {preview.content.map((line) => <Copy key={line}>{line}</Copy>)}
+    </>
   );
 }
 export function ShareScreen() {
   const w = useWellness();
-  const { recordShare } = useSharedInformation();
-  const confirmed = useRef(false);
-  const [preview, setPreview] = useState(false),
-    [done, setDone] = useState(false);
-  const eligible = w.selected.filter(w.available);
-  const recipient = w.recipients.find((r) => r.id === w.destination);
-  const valid =
-    eligible.length > 0 && (w.destination === "export" || !!recipient);
-  const destinationText =
-    w.destination === "export"
-      ? "Demo export preview (no file download)"
-      : recipient
-        ? `${recipient.name} · ${recipient.email} · ${recipient.relationship}`
-        : "Choose a destination";
+  const shares = useSharedInformation();
+  const flow = useShareWorkflow();
+  const { phase } = flow;
+  const busy = phase.kind === "checking" || phase.kind === "submitting";
   const add = () => {
     w.setRecipientOrigin("share");
     go(20);
   };
+  const choose = (id: string) => { w.setDestination(id); flow.dismissResult(); };
+  const dialogOpen = phase.kind !== "draft" && phase.kind !== "succeeded" && phase.kind !== "checking";
   return (
     <Page>
       <Intro
         eyebrow="YOU CHOOSE WHAT TO INCLUDE"
         title="Export and share"
-        description="Build a demo preview, review its destination, then explicitly confirm the simulation."
+        description="Choose permitted records and a destination, review the exact preview, then explicitly confirm the simulation."
       />
       <Notice>
-        No sending or file export service is connected. Recipients and
+        No sending or file export service is connected. Recipient shares are
+        simulated in this session; nothing reaches the recipient. Recipients and
         selections stay in this session.
       </Notice>
       <Card>
@@ -485,10 +488,7 @@ export function ShareScreen() {
         <MenuRow
           label="Demo export preview"
           selected={w.destination === "export"}
-          onPress={() => {
-            w.setDestination("export");
-            setDone(false);
-          }}
+          onPress={() => choose("export")}
         />
         {w.recipients.map((r) => (
           <MenuRow
@@ -496,17 +496,18 @@ export function ShareScreen() {
             label={r.name}
             description={`${r.email} · ${r.relationship}`}
             selected={w.destination === r.id}
-            onPress={() => {
-              w.setDestination(r.id);
-              setDone(false);
-            }}
+            onPress={() => choose(r.id)}
           />
         ))}
         <Button label="Add recipient" onPress={add} />
+        <Copy kind="caption">
+          Sharing with a recipient requires Sharing to be on in Privacy and
+          consent. It is checked again when you confirm.
+        </Copy>
       </Card>
       <Card>
         <Copy kind="heading">Select wellness records</Copy>
-        <Copy kind="caption">Synthetic demo week · Monday–Sunday</Copy>
+        <Copy kind="caption">{sharePeriod}</Copy>
         {metrics.map((m) => (
           <Toggle
             key={m}
@@ -524,7 +525,7 @@ export function ShareScreen() {
                   ? [...w.selected.filter((x) => x !== m), m]
                   : w.selected.filter((x) => x !== m),
               );
-              setDone(false);
+              flow.dismissResult();
             }}
           />
         ))}
@@ -535,61 +536,105 @@ export function ShareScreen() {
         observations, and remembered details. No trusted-contact status or
         notification eligibility is granted.
       </Copy>
+      {shares.simulated ? (
+        <Toggle
+          label="Simulate sharing service failure"
+          description="Demo control. The simulated service reports it is unavailable for new shares and revocations."
+          value={shares.simulateFailure}
+          onChange={shares.setSimulateFailure}
+          disabled={busy}
+        />
+      ) : null}
       <Button
-        label="Preview selected content"
+        label={phase.kind === "checking" ? "Checking sharing permission…" : "Preview selected content"}
         kind="primary"
-        disabled={!valid}
-        onPress={() => {
-          confirmed.current = false;
-          setPreview(true);
-          setDone(false);
-        }}
+        disabled={!flow.current || busy}
+        onPress={() => { void flow.preview(); }}
       />
-      {done ? (
+      {phase.kind === "succeeded" ? (
+        phase.preview.destination.kind === "export" ? (
+          <Notice>
+            Simulation complete. No information was sent and no file was
+            downloaded.
+          </Notice>
+        ) : (
+          <>
+            <Notice>
+              Simulated share confirmed for {phase.preview.destination.recipient.name}.
+              Nothing was sent and the recipient received nothing. Review or
+              revoke it in Shared information.
+            </Notice>
+            <Button label="View shared information" kind="text" onPress={() => go(14)} />
+          </>
+        )
+      ) : null}
+      {flow.detached ? (
         <>
-        <Notice>
-          Simulation complete. No information was sent and no file was
-          downloaded.
-        </Notice>
-        <Button label="View shared information" kind="text" onPress={() => go(14)} />
+          <Notice>
+            You stopped waiting. The simulated request may still complete; if it
+            does, it appears in Shared information. Check there before sharing
+            again.
+          </Notice>
+          <Button label="View shared information" kind="text" onPress={() => go(14)} />
         </>
       ) : null}
-      {preview ? (
-        <Dialog
-          title="Review exact demo content"
-          onClose={() => setPreview(false)}
-        >
-          <Copy kind="heading">Destination</Copy>
-          <Copy>{destinationText}</Copy>
-          <Copy kind="heading">Content</Copy>
-          <Copy>Synthetic demo week · Monday–Sunday</Copy>
-          {eligible.map((m, i) => (
-            <Copy key={m}>{selectedContent(eligible)[i]}</Copy>
-          ))}
-          {!valid ? (
-            <Notice error>
-              These records or destination are no longer available. Cancel and
-              update your selection.
-            </Notice>
-          ) : null}
-          <Notice>
-            {sharedInformationCopy.previewNotice}
-          </Notice>
-          <Button
-            label="Confirm simulated action"
-            disabled={!valid}
-            kind="primary"
-            onPress={() => {
-              if (!valid || confirmed.current) return;
-              confirmed.current = true;
-              if (recipient) recordShare({
-                recipientName: recipient.name,
-                content: selectedContent(eligible),
-              });
-              setPreview(false);
-              setDone(true);
-            }}
-          />
+      {dialogOpen ? (
+        <Dialog title="Review exact demo content" onClose={flow.close}>
+          {phase.kind === "denied" ? (
+            <>
+              <Notice error>
+                {phase.reason === "consent"
+                  ? "Sharing is turned off in Privacy and consent, so nothing was shared. Turn Sharing on and save, then preview again."
+                  : "Your sharing preference could not be read, so nothing was shared. Open Privacy and consent to retry loading it."}
+              </Notice>
+              <Button label="Open privacy and consent" onPress={() => { flow.close(); go(16); }} />
+            </>
+          ) : phase.kind === "invalidated" ? (
+            <>
+              <Notice error>
+                The records, destination, or their availability changed. This
+                preview is out of date and cannot be confirmed. Nothing was
+                shared.
+              </Notice>
+              <Button
+                label="Review updated content"
+                kind="primary"
+                disabled={!flow.current}
+                onPress={() => { void flow.preview(); }}
+              />
+              {!flow.current ? (
+                <Copy kind="caption">No eligible content or destination is selected. Cancel and update your selection.</Copy>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <SharePreviewDetails preview={phase.preview} />
+              <Notice>{sharedInformationCopy.previewNotice}</Notice>
+              {phase.kind === "failed" ? <Notice error>{shareErrors[phase.error]}</Notice> : null}
+              {phase.kind === "unknown" ? (
+                <Notice error>
+                  No response from the simulated sharing service. The share may or
+                  may not have been recorded. Trying again is safe: it reuses this
+                  request and cannot create a duplicate.
+                </Notice>
+              ) : null}
+              {phase.kind === "submitting" ? (
+                <Notice>Confirming with the simulated sharing service… Cancel stops waiting here; it does not undo a request already received.</Notice>
+              ) : null}
+              <Button
+                label={
+                  phase.kind === "submitting"
+                    ? "Confirming…"
+                    : phase.kind === "ready"
+                      ? "Confirm simulated action"
+                      : "Try again"
+                }
+                disabled={phase.kind === "submitting" || (phase.kind === "failed" && phase.error !== "UNAVAILABLE")}
+                kind="primary"
+                onPress={() => { void flow.confirm(); }}
+              />
+            </>
+          )}
         </Dialog>
       ) : null}
     </Page>
