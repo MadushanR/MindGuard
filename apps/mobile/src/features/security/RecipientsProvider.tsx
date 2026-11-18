@@ -8,15 +8,32 @@ import {
   RECIPIENT_STORAGE_KEY, recipientsReducer,
   type RecipientInput, type RecipientsState, type TrustedRecipient,
 } from "./recipients";
+import { useSecuritySessionOptional, type SecuritySession } from "./SecuritySessionProvider";
 
 export interface RecipientsContextValue extends RecipientsState {
-  /** Resolves only after saving locally; adding never grants sharing permission. */
+  /** Resolves after the selected account/local adapter confirms saving; never grants sharing permission. */
   addRecipient(input: RecipientInput): Promise<TrustedRecipient>;
   restoreRecipients(): Promise<void>;
 }
 const RecipientsContext = createContext<RecipientsContextValue | null>(null);
 
 export function RecipientsProvider({ children }: PropsWithChildren) {
+  const session = useSecuritySessionOptional();
+  if (session) return <LiveRecipientsProvider session={session}>{children}</LiveRecipientsProvider>;
+  return <LocalRecipientsProvider>{children}</LocalRecipientsProvider>;
+}
+function LiveRecipientsProvider({ children, session }: PropsWithChildren<{ session: SecuritySession }>) {
+  const addRecipient = async (input: RecipientInput) => {
+    const contact = { ...normalizeRecipient(input), id: `contact-${Date.now()}-${Math.random().toString(36).slice(2)}` };
+    const result = await session.request<TrustedRecipient>("/contacts", "POST", contact);
+    await session.refresh(); return result;
+  };
+  return <RecipientsContext.Provider value={{ recipients: session.snapshot?.contacts ?? [], ready: !!session.snapshot,
+    saving: session.busy, readError: !!session.error, writeError: false,
+    addRecipient, restoreRecipients: async () => { await session.refresh(); },
+  }}>{children}</RecipientsContext.Provider>;
+}
+function LocalRecipientsProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(recipientsReducer, initialRecipientsState);
   const current = useRef(state);
   const alive = useRef(true);

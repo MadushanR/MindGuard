@@ -5,10 +5,10 @@ import { AIProvider } from "../../ai";
 import { SignInScreen } from "../screens/SignInScreen";
 import { initialSignInState, signInReducer, validateSignIn } from "../signIn";
 
-jest.mock("expo-router", () => ({
-  router: { push: jest.fn(), replace: jest.fn() },
-  useFocusEffect: jest.fn(),
-}));
+jest.mock("expo-router", () => {
+  const router = { push: jest.fn(), replace: jest.fn(), navigate: jest.fn() };
+  return { router, useRouter: () => router, useFocusEffect: jest.fn() };
+});
 jest.mock("../../../shared/ui", () => ({
   ...jest.requireActual("../../../shared/ui"),
   ZenOrb: () => null,

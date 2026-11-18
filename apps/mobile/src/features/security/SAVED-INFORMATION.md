@@ -1,5 +1,12 @@
 # Screen 17: Saved Information and Deletion
 
+> Configured account mode now starts with account-owned AWS categories, initially
+> empty. Saving fictional examples is explicit and requires the applicable
+> consents. Selected-category deletion is persisted to AWS; it does not remove
+> other categories or existing shares. Account deletion remains disabled. Export
+> preview is still simulated. See root `docs/SECURITY-INCREMENT.md`; the original
+> session-only behavior below remains isolated to standalone simulation mode.
+
 `/saved-information` is a thin wrapper for `screens/SavedInformationScreen.tsx`. It uses the existing Page, Card, Copy, Button, Dialog, MenuRow, theme and browser-only responsive helpers. The feature-local InformationCheckbox uses shared icons/typography/colors, native accessibility state, web ARIA state, visible focus and Space/Enter activation. It introduces no UI dependency. Native presentation remains one column; desktop web uses the existing security screen layout.
 
 ## Data and deletion boundaries

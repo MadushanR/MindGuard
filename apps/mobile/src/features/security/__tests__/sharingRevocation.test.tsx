@@ -118,6 +118,47 @@ test("a late confirmation after an unknown revocation outcome removes the share 
   expect(service.revokeShare).toHaveBeenCalledTimes(1);
 });
 
+test.each(["rejection", "synchronous error"])("a revocation %s stays unknown and retries the same operation", async (failure) => {
+  const service = revokeService([() => {
+    if (failure === "synchronous error") throw new Error("Connection closed");
+    return Promise.reject(new Error("Response lost"));
+  }]);
+  await renderHistory(service);
+  await openRevoke();
+  await fireEvent.press(screen.getByLabelText("Confirm revoke access"));
+  expect(await screen.findByText(copy.revokeUnknown)).toBeTruthy();
+  expect(shares.records[0].revocation).toBe("unknown");
+  expect(screen.queryByText(copy.revokeFailedLabel)).toBeNull();
+  await fireEvent.press(screen.getByLabelText("Try revoking again"));
+  await waitFor(() => expect(shares.records).toEqual([]));
+  const calls = jest.mocked(service.revokeShare).mock.calls;
+  expect(calls).toHaveLength(2);
+  expect(calls[1]).toEqual(calls[0]);
+});
+
+test.each(["rejection", "synchronous error"])("a create %s stays unknown and retains its payload binding", async (failure) => {
+  const service = revokeService([]);
+  await renderHistory(service);
+  jest.mocked(service.createShare).mockImplementationOnce(() => {
+    if (failure === "synchronous error") throw new Error("Connection closed");
+    return Promise.reject(new Error("Response lost"));
+  });
+  const request = { requestId: "ambiguous", recipientName: "Sam Example", content: ["Synthetic sleep"] };
+  await act(async () => {
+    expect(await shares.submitShare(request)).toEqual({ status: "unknown" });
+  });
+  expect(shares.records).toHaveLength(1);
+  await act(async () => {
+    expect(await shares.submitShare({ ...request, recipientName: "Another recipient" })).toEqual({ status: "failed", error: "CONFLICT" });
+    expect(await shares.submitShare({ ...request, content: ["Different content"] })).toEqual({ status: "failed", error: "CONFLICT" });
+    expect((await shares.submitShare(request)).status).toBe("complete");
+  });
+  expect(service.createShare).toHaveBeenCalledTimes(3);
+  const calls = jest.mocked(service.createShare).mock.calls;
+  expect(calls[2]).toEqual(calls[1]);
+  expect(shares.records).toHaveLength(2);
+});
+
 describe("request ID and payload checks", () => {
   const share = { requestId: "r1", recipientName: "Alex Demo", content: ["Synthetic steps"] };
   test("an identical retry returns the existing share; a different payload is a conflict", async () => {

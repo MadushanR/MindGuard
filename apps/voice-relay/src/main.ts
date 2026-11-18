@@ -17,6 +17,7 @@ import {
 import { CognitoVoiceAccess, type Principal } from "./access.js";
 import { OpenAIConversationAdapter } from "./realtime.js";
 import { loadApprovedPolicy } from "./policy.js";
+import { DynamoSecurityStore, SecurityApplication, SecurityError, securityRouter } from "./security.js";
 
 @Module({})
 class VoiceRelayModule {}
@@ -56,6 +57,9 @@ if (!missing.length) {
 const app = await NestFactory.create(VoiceRelayModule, {
   logger: ["error", "warn"],
 });
+// Account identity/consent must remain usable without enabling a voice provider.
+if (!access && process.env.COGNITO_ISSUER && process.env.COGNITO_CLIENT_ID && process.env.VOICE_TABLE)
+  access = new CognitoVoiceAccess(process.env.COGNITO_ISSUER, process.env.COGNITO_CLIENT_ID, process.env.VOICE_TABLE);
 app.enableCors({
   origin: origins,
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -65,7 +69,7 @@ app.use(express.json({ limit: "40kb" }));
 const api = express.Router();
 type AuthRequest = Request & { principal?: Principal };
 const auth = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (missing.length || !access)
+  if (!access || (missing.length && req.path !== "/consent"))
     return res.status(503).json({ code: "SERVICE_NOT_CONFIGURED" });
   const token = req.headers.authorization?.match(/^Bearer ([^\s]+)$/)?.[1];
   if (!token) return res.status(401).json({ code: "AUTH_REQUIRED" });
@@ -124,6 +128,7 @@ api.put("/consent", async (req: AuthRequest, res, next) => {
 });
 api.post("/sessions", async (req: AuthRequest, res, next) => {
   try {
+    if (missing.length || !policy) return res.status(503).json({ code: "SERVICE_NOT_CONFIGURED" });
     const p = req.principal!;
     await access!.check(p.owner, p.expiresAt);
     if (
@@ -242,6 +247,23 @@ api.post("/sessions/:id/text", async (req: AuthRequest, res, next) => {
   }
 });
 app.use("/api/voice", api);
+if (process.env.COGNITO_ISSUER && process.env.COGNITO_CLIENT_ID && process.env.VOICE_TABLE) {
+  const securityAccess = access ?? new CognitoVoiceAccess(process.env.COGNITO_ISSUER, process.env.COGNITO_CLIENT_ID, process.env.VOICE_TABLE);
+  const security = new SecurityApplication(new DynamoSecurityStore(process.env.VOICE_TABLE));
+  app.use("/api/security", securityRouter(security, async token => {
+    try {
+      const p = await securityAccess.authenticate(token, true);
+      if (!p.email) throw new SecurityError("VERIFIED_EMAIL_REQUIRED", 403);
+      return { owner: p.owner, email: p.email };
+    } catch (e) {
+      if (e instanceof SecurityError) throw e;
+      if (e instanceof VoiceError || (e instanceof Error && (e.name.startsWith("JWT") || e.name.startsWith("JWS") || e.name === "JOSEAlgNotAllowed"))) throw new SecurityError("AUTH_REQUIRED", 401);
+      throw new SecurityError("IDENTITY_UNAVAILABLE", 503);
+    }
+  }, async (operation, token) => { await securityAccess.cognito(operation, token); }, owner => {
+    for (const s of sessions.values()) if (s.principal.owner === owner) { s.session.stop(); s.shutdown?.(); }
+  }, process.env.SECURITY_ACCOUNT_DELETION_ENABLED === "true"));
+} else app.use("/api/security", (_req: Request, res: Response) => res.status(503).json({ code: "SERVICE_NOT_CONFIGURED" }));
 app.use((error: Error, _req: Request, res: Response, _next: NextFunction) =>
   res
     .status(error instanceof VoiceError ? 403 : 503)

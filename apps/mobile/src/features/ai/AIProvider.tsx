@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -48,7 +49,7 @@ const initialModel = (): AppModel => ({
   voiceState: "ready",
   voiceGeneration: 0,
 });
-function useController() {
+function useController(storageKey = STORAGE_KEY) {
   const [model, dispatch] = useReducer(
     (_previous: AppModel, next: AppModel) => next,
     undefined,
@@ -59,14 +60,15 @@ function useController() {
     [readError, setReadError] = useState<string | null>(null),
     [writeError, setWriteError] = useState<string | null>(null),
     [saving, setSaving] = useState(false);
+  const [loadedKey, setLoadedKey] = useState(storageKey);
+  const accountReady = ready && loadedKey === storageKey;
+  const readRevision = useRef(0);
   const chatTimer = useRef<ReturnType<typeof setTimeout> | null>(null),
     voiceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failed = useRef(new Set<string>());
-  const queue = useRef<StorageQueue | null>(null);
-  if (!queue.current)
-    queue.current = new StorageQueue((key, value) =>
-      AsyncStorage.setItem(key, value),
-    );
+  const queue = useMemo(() => new StorageQueue((key, value) =>
+    AsyncStorage.setItem(key, value), storageKey,
+  ), [storageKey]);
   const commit = useCallback((action: Action) => {
     current.current = reducer(current.current, action);
     dispatch(current.current);
@@ -80,40 +82,51 @@ function useController() {
     voiceTimer.current = null;
   }, []);
   const restore = useCallback(async () => {
+    const revision = ++readRevision.current;
+    cancelChat(); cancelVoice();
+    current.current = initialModel(); dispatch(current.current);
     setReadError(null);
     setReady(false);
+    setSaving(false); setWriteError(null);
     try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const raw = await AsyncStorage.getItem(storageKey);
+      if (revision !== readRevision.current) return;
       commit({
         type: "restore",
         saved: raw ? parseSaved(raw) : initialSaved(),
       });
+      setLoadedKey(storageKey);
       setReady(true);
     } catch (error) {
+      if (revision !== readRevision.current) return;
       setReadError(
         error instanceof Error ? error.message : "Storage unavailable",
       );
     }
-  }, [commit]);
+  }, [commit, storageKey, cancelChat, cancelVoice]);
+  const abandonRead = useCallback(() => { readRevision.current++; }, []);
   useEffect(() => {
     void restore();
     return () => {
+      abandonRead();
       cancelChat();
       cancelVoice();
     };
-  }, [restore, cancelChat, cancelVoice]);
+  }, [restore, cancelChat, cancelVoice, abandonRead]);
   const persist = useCallback((saved: SavedData) => {
+    const revision = readRevision.current;
     setSaving(true);
-    void queue.current!.save(saved, (error) => {
+    void queue.save(saved, (error) => {
+      if (revision !== readRevision.current) return;
       setWriteError(error);
       setSaving(false);
     });
-  }, []);
+  }, [queue]);
   useEffect(() => {
-    if (ready && !fixtureErrors.length) persist(model.saved);
-  }, [model.saved, ready, persist]);
+    if (accountReady && !fixtureErrors.length) persist(model.saved);
+  }, [model.saved, accountReady, persist]);
   useEffect(() => {
-    if (!ready) return;
+    if (!accountReady) return;
     const expire = () => commit({ type: "expire", now: Date.now() });
     const interval = setInterval(expire, 30000);
     const subscription = AppState.addEventListener("change", (state) => {
@@ -127,7 +140,7 @@ function useController() {
       clearInterval(interval);
       subscription.remove();
     };
-  }, [ready, commit, cancelVoice]);
+  }, [accountReady, commit, cancelVoice]);
   const scheduleReply = useCallback(
     (requestId: string) => {
       cancelChat();
@@ -155,13 +168,13 @@ function useController() {
   );
   const send = useCallback(
     (text: string) => {
-      if (!ready || !text.trim() || current.current.chatStatus === "processing")
+      if (!accountReady || !text.trim() || current.current.chatStatus === "processing")
         return;
       const requestId = makeId("request");
       commit({ type: "send", text, requestId });
       scheduleReply(requestId);
     },
-    [ready, commit, scheduleReply],
+    [accountReady, commit, scheduleReply],
   );
   const retry = useCallback(() => {
     if (!current.current.pending || current.current.chatStatus !== "error")
@@ -272,8 +285,8 @@ function useController() {
     cancelChat();
     cancelVoice();
     try {
-      await queue.current!.flush();
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await queue.flush();
+      await AsyncStorage.removeItem(storageKey);
       commit({
         type: "scenario",
         id: defaultScenarioId,
@@ -285,10 +298,16 @@ function useController() {
     } catch (error) {
       setReadError(error instanceof Error ? error.message : "Reset failed");
     }
-  }, [cancelChat, cancelVoice, commit]);
+  }, [cancelChat, cancelVoice, commit, storageKey, queue]);
+  const visibleModel = accountReady ? model : initialModel();
   return {
-    model,
-    ready,
+    removeAccountCache: async () => {
+      if (storageKey === STORAGE_KEY) throw new Error("Synthetic data cannot be removed as account deletion.");
+      await queue.flush();
+      await AsyncStorage.removeItem(storageKey);
+    },
+    model: visibleModel,
+    ready: accountReady,
     readError,
     writeError,
     saving,
@@ -302,7 +321,7 @@ function useController() {
     loadScenario,
     resetLocalData,
     restore,
-    retryStorage: () => persist(current.current.saved),
+    retryStorage: () => { if (accountReady) persist(current.current.saved); },
     openConversation: (id: string) => {
       cancelChat();
       cancelVoice();
@@ -345,14 +364,14 @@ function useController() {
       commit({ type: "observation", id, label }),
     dismissObservation: (id: string) =>
       commit({ type: "observation", id, dismiss: true }),
-    observations: model.saved.observations,
-    consent: model.saved.consent,
+    observations: visibleModel.saved.observations,
+    consent: visibleModel.saved.consent,
   };
 }
 type Controller = ReturnType<typeof useController>;
 const Context = createContext<Controller | null>(null);
-export function AIProvider({ children }: PropsWithChildren) {
-  const value = useController();
+export function AIProvider({ children, storageKey }: PropsWithChildren<{ storageKey?: string }>) {
+  const value = useController(storageKey);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export function useAI() {

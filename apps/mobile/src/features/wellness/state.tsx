@@ -2,9 +2,12 @@ import {
   createContext,
   useContext,
   useState,
+  useCallback,
+  useEffect,
   type PropsWithChildren,
 } from "react";
 import { wellnessRecords } from "@mindguard/fixtures";
+import { useSecuritySessionOptional } from "../security/SecuritySessionProvider";
 
 // No wellness/security integration contracts exist yet. These demo models stay
 // session-only and never enter the existing AI AsyncStorage profile.
@@ -67,7 +70,7 @@ function useController() {
     setSyncFailed(simulateSyncFailure);
     setSynced(!simulateSyncFailure);
   };
-  const reset = () => {
+  const reset = useCallback(() => {
     setWatch("disconnected");
     setDevice("My smartwatch");
     setPermissions({ steps: false, sleep: false, heart: false });
@@ -79,7 +82,7 @@ function useController() {
     setDestination("export");
     setSelected([]);
     setRecipientOrigin("settings");
-  };
+  }, []);
   return {
     watch,
     setWatch,
@@ -110,6 +113,8 @@ function useController() {
 const Context = createContext<ReturnType<typeof useController> | null>(null);
 export function WellnessProvider({ children }: PropsWithChildren) {
   const value = useController();
+  const subscribe = useSecuritySessionOptional()?.subscribe;
+  useEffect(() => subscribe?.(value.reset), [subscribe, value.reset]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export function useWellness() {

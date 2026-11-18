@@ -34,6 +34,7 @@ import {
 } from "./state";
 import { destinationText, sharePeriod, type SharePreview } from "./sharing";
 import { useShareWorkflow } from "./useShareWorkflow";
+import { useSecuritySessionOptional } from "../security/SecuritySessionProvider";
 
 const go = (id: ScreenId) => router.push(route(id));
 function Link({ id, label }: { id: ScreenId; label?: string }) {
@@ -445,9 +446,17 @@ export function ResourcesScreen() {
   );
 }
 const shareErrors: Record<ShareErrorCode, string> = {
+  AUTH_REQUIRED: "Sign in again before sharing. Your session is unavailable or expired.",
+  CONSENT_REQUIRED: "Sharing and wellness-data consent are required. Review Privacy and consent.",
+  RECIPIENT_UNAVAILABLE: "This recipient must first sign in with their verified account email. Check the reviewed destination.",
+  CAPACITY: "This capstone account has reached its bounded record limit. Review existing information before retrying.",
   UNAVAILABLE: "The simulated sharing service is unavailable. Nothing was shared. Your selections are kept; try again.",
   CONFLICT: "This request no longer matches what was submitted earlier. Nothing new was shared. Cancel and preview again.",
   INVALID: "The simulated sharing service rejected this content. Nothing was shared. Cancel and update your selection.",
+};
+const liveShareErrors = { ...shareErrors,
+  UNAVAILABLE: "The sharing request was rejected. Refresh your account and review its status before trying again.",
+  INVALID: "The server rejected the selected content or destination. Cancel and review an eligible selection.",
 };
 function SharePreviewDetails({ preview }: { preview: SharePreview }) {
   return (
@@ -476,13 +485,13 @@ export function ShareScreen() {
       <Intro
         eyebrow="YOU CHOOSE WHAT TO INCLUDE"
         title="Export and share"
-        description="Choose permitted records and a destination, review the exact preview, then explicitly confirm the simulation."
+        description={shares.simulated ? "Choose permitted records and a destination, review the exact preview, then explicitly confirm the simulation." : "Choose permitted records and a signed-in recipient, review the exact destination and content, then confirm in-app access."}
       />
-      <Notice>
+      <Notice>{shares.simulated ? <>
         No sending or file export service is connected. Recipient shares are
         simulated in this session; nothing reaches the recipient. Recipients and
         selections stay in this session.
-      </Notice>
+      </> : <>Recipient sharing uses authenticated in-app access stored in AWS. The recipient must have signed in with their verified email and opens Shared information to view it. No email, public link or file is sent. Source wellness records remain explicitly synthetic. Export remains a local preview.</>}</Notice>
       <Card>
         <Copy kind="heading">Destination</Copy>
         <MenuRow
@@ -560,9 +569,7 @@ export function ShareScreen() {
         ) : (
           <>
             <Notice>
-              Simulated share confirmed for {phase.preview.destination.recipient.name}.
-              Nothing was sent and the recipient received nothing. Review or
-              revoke it in Shared information.
+              {shares.simulated ? `Simulated share confirmed for ${phase.preview.destination.recipient.name}. Nothing was sent and the recipient received nothing.` : `In-app access confirmed for ${phase.preview.destination.recipient.name}. The recipient can open Shared information in their account.`} Review or revoke it in Shared information.
             </Notice>
             <Button label="View shared information" kind="text" onPress={() => go(14)} />
           </>
@@ -571,7 +578,7 @@ export function ShareScreen() {
       {flow.detached ? (
         <>
           <Notice>
-            You stopped waiting. The simulated request may still complete; if it
+            You stopped waiting. The request may still complete; if it
             does, it appears in Shared information. Check there before sharing
             again.
           </Notice>
@@ -579,7 +586,7 @@ export function ShareScreen() {
         </>
       ) : null}
       {dialogOpen ? (
-        <Dialog title="Review exact demo content" onClose={flow.close}>
+        <Dialog title={shares.simulated ? "Review exact demo content" : "Review exact content and recipient"} onClose={flow.close}>
           {phase.kind === "denied" ? (
             <>
               <Notice error>
@@ -609,24 +616,24 @@ export function ShareScreen() {
           ) : (
             <>
               <SharePreviewDetails preview={phase.preview} />
-              <Notice>{sharedInformationCopy.previewNotice}</Notice>
-              {phase.kind === "failed" ? <Notice error>{shareErrors[phase.error]}</Notice> : null}
+              <Notice>{shares.simulated ? sharedInformationCopy.previewNotice : "Confirmation grants this signed-in recipient in-app access to exactly the synthetic records above. No trusted-contact or alert eligibility is granted."}</Notice>
+              {phase.kind === "failed" ? <Notice error>{(shares.simulated ? shareErrors : liveShareErrors)[phase.error]}</Notice> : null}
               {phase.kind === "unknown" ? (
                 <Notice error>
-                  No response from the simulated sharing service. The share may or
+                  No response from the {shares.simulated ? "simulated " : ""}sharing service. The share may or
                   may not have been recorded. Trying again is safe: it reuses this
                   request and cannot create a duplicate.
                 </Notice>
               ) : null}
               {phase.kind === "submitting" ? (
-                <Notice>Confirming with the simulated sharing service… Cancel stops waiting here; it does not undo a request already received.</Notice>
+                <Notice>Confirming with the {shares.simulated ? "simulated " : ""}sharing service… Cancel stops waiting here; it does not undo a request already received.</Notice>
               ) : null}
               <Button
                 label={
                   phase.kind === "submitting"
                     ? "Confirming…"
                     : phase.kind === "ready"
-                      ? "Confirm simulated action"
+                      ? shares.simulated || phase.preview.destination.kind === "export" ? "Confirm simulated action" : "Confirm in-app sharing"
                       : "Try again"
                 }
                 disabled={phase.kind === "submitting" || (phase.kind === "failed" && phase.error !== "UNAVAILABLE")}
@@ -641,6 +648,7 @@ export function ShareScreen() {
   );
 }
 export function RecipientScreen() {
+  const account = useSecuritySessionOptional();
   const w = useWellness();
   const contacts = useRecipients();
   const { origin } = useLocalSearchParams<{ origin?: string }>();
@@ -740,7 +748,7 @@ export function RecipientScreen() {
           <Notice error>{errors.relationship}</Notice>
         ) : null}
       </Card>
-      {trusted ? <Notice>{trustedContactCopy.addNotice}</Notice> : <Notice>
+      {trusted ? <Notice>{account ? "Save a name and relationship to your account. This grants no sharing access or alert permission." : trustedContactCopy.addNotice}</Notice> : <Notice>
         A recipient is a demo sharing destination, not a trusted contact.
         Check-in eligibility and notifications are unavailable until the team’s
         security integration is implemented. Use invented details; this form
@@ -757,6 +765,9 @@ export function RecipientScreen() {
   );
 }
 export function SettingsScreen() {
+  const account = useSecuritySessionOptional();
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountBusy, setAccountBusy] = useState(false);
   const { clearShareSession } = useSharedInformation();
   const ai = useAI(),
     w = useWellness();
@@ -773,6 +784,7 @@ export function SettingsScreen() {
     [10, "Wellness data sources"],
     [17, "Saved information and deletion"],
     [14, "Shared information"],
+    [15, "Contact alert review"],
   ];
   return (
     <Page>
@@ -814,11 +826,13 @@ export function SettingsScreen() {
         }}
       />
       <Notice>
-        Account authentication and deletion are not connected in this prototype.
+        {account ? account.identity ? `Signed in as ${account.identity.email}. Authentication is shared with voice and sharing.` : "Sign in to manage your account. Existing synthetic device data stays separate." : "Account authentication and deletion are not connected in this prototype."}
       </Notice>
-      <Button label="Sign out of demo" onPress={() => setAction("signout")} />
+      {accountError ? <Notice error>{accountError}</Notice> : null}
+      {account && !account.identity ? <Button label="Sign in" onPress={() => go(3)} /> : null}
+      <Button label={account ? "Sign out" : "Sign out of demo"} onPress={() => setAction("signout")} />
       <Button
-        label="Account deletion information"
+        label={account?.snapshot?.accountDeletionAvailable ? "Delete account" : "Account deletion information"}
         kind="danger"
         onPress={() => setAction("delete")}
       />
@@ -830,14 +844,14 @@ export function SettingsScreen() {
         <Dialog
           title={
             action === "signout"
-              ? "Leave the demo?"
+              ? account ? "Sign out?" : "Leave the demo?"
               : action === "reset" ? "Reset wellness session?"
-                : "Account deletion unavailable"
+                : account?.snapshot?.accountDeletionAvailable ? "Delete your account?" : "Account deletion unavailable"
           }
           onClose={() => setAction(null)}
         >
           <Copy>
-            {action === "signout"
+            {account && action !== "reset" ? action === "signout" ? "Stop active voice and sign out. Your saved account data stays available for your next sign-in." : !account.snapshot?.accountDeletionAvailable ? "Account deletion is disabled because the AWS login lacks the required table Query and DeleteItem permissions. Nothing is deleted by this action. Selected saved categories can still be deleted in Saved information." : "Permanently delete your Cognito account, AWS security records, contacts, saved categories, shares and related inbox access. This device's account-scoped AI cache is removed after confirmation. Legacy synthetic stores and other accounts are preserved. Copies already seen or downloaded cannot be recalled. This cannot be undone." : action === "signout"
               ? "This clears the active conversation, wellness session, and simulated share history, then returns to Welcome. Saved AI history, preferences, and trusted contacts remain on this device. No authenticated account is signed out."
               : action === "reset" ? "This removes all sharing recipients, selections, and simulated share history in this session, disconnects the demo watch, and resets wearable permissions and sync state. Saved AI records and trusted contacts stay on this device. This cannot be undone."
                 : "No account deletion backend or security confirmation flow exists yet. Use the team's saved-information destination for future integration. This action does not delete local AI records."}
@@ -845,12 +859,24 @@ export function SettingsScreen() {
           <Button
             label={
               action === "signout"
-                ? "Confirm leave demo"
+                ? account ? "Confirm sign out" : "Confirm leave demo"
                 : action === "reset" ? "Confirm reset wellness session"
-                  : "Open saved information"
+                  : account?.snapshot?.accountDeletionAvailable ? "Confirm delete account" : "Open saved information"
             }
             kind={action === "reset" ? "danger" : "secondary"}
+            disabled={accountBusy}
             onPress={() => {
+              if (account && action !== "reset") {
+                if (action === "delete" && !account.snapshot?.accountDeletionAvailable) { setAction(null); go(17); return; }
+                if (action === "signout") { account.logout(); router.replace(route(1)); }
+                else {
+                  setAccountBusy(true); setAccountError(null);
+                  void account.deleteAccount().then(async () => { await ai.removeAccountCache(); router.replace(route(1)); })
+                    .catch(e => setAccountError(e instanceof Error ? e.message : "Deletion outcome unknown. Retry deletion."))
+                    .finally(() => setAccountBusy(false));
+                }
+                return;
+              }
               setAction(null);
               if (action === "signout") {
                 ai.leave();

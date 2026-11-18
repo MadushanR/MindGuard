@@ -11,8 +11,15 @@ import { colors, styles } from "../../../shared/theme";
 import {
   alertRecipient, contactAlertReducer, initialContactAlertState, validateAlert,
 } from "../contactAlert";
+import { useSecuritySessionOptional } from "../SecuritySessionProvider";
+import { AccountAlertReview } from "./AccountAlertReview";
 
 export function ContactAlertScreen() {
+  const account = useSecuritySessionOptional();
+  if (account) return <AccountAlertReview account={account} />;
+  return <SimulatedContactAlertScreen />;
+}
+function SimulatedContactAlertScreen() {
   const [state, dispatch] = useReducer(contactAlertReducer, initialContactAlertState);
   const [focused, setFocused] = useState(false);
   const { desktop } = useBrowserLayout();

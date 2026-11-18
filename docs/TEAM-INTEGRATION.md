@@ -1,5 +1,14 @@
 # Team frontend integration
 
+> Shared security update: the configured root now mounts `SecuritySessionProvider`;
+> general account and voice screens share Cognito identity. Contacts, four security
+> consents, saved categories, UC-10 controlled in-app access and opt-in in-app alerts
+> use AWS through the existing local relay. See `SECURITY-INCREMENT.md` for the final
+> public contract, lifecycle and storage boundaries. Account deletion is deliberately
+> disabled. Older frontend-only/account-placeholder descriptions below are historical
+> guidance, not the current configured security implementation. No implicit legacy
+> synthetic-store migration or live transcript saving is introduced.
+
 > FA3 voice update (November 16, 2026): `/voice` now uses `LiveVoiceProvider`, the real relay, minimal Cognito sign-in and server consent. Its temporary text handoff is shown inside `/chat` without passing live content to the simulation's storage. See `VOICE-INCREMENT.md` and `VOICE-LOCAL.md`. The older simulation-specific descriptions below apply to the remaining prototype behavior, not to the live voice path. Munsif can replace the `VoiceIdentityPort` integration; the shared-team alignment is still pending. Broader account screens were not replaced by the voice-only auth UI.
 
 The application is one Expo/React Native app. Clone this repository, run `npm run setup:env`, then run `npm ci` at its root. [Team environment setup](ENVIRONMENT-SETUP.md) lists all templates and which values/access Madushan supplies privately. Existing local settings are preserved. Commit the root `package-lock.json` whenever agreed dependencies change; do not create another app or lockfile for your pages.

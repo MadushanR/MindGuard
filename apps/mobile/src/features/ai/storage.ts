@@ -92,13 +92,13 @@ export function parseSaved(raw: string): SavedData {
 export class StorageQueue {
   private tail: Promise<void> = Promise.resolve();
   private revision = 0;
-  constructor(private write: (key: string, value: string) => Promise<void>) {}
+  constructor(private write: (key: string, value: string) => Promise<void>, private storageKey = STORAGE_KEY) {}
   save(data: SavedData, result: (error: string | null) => void) {
     const revision = ++this.revision,
       serialized = JSON.stringify(data);
     this.tail = this.tail
       .catch(() => {})
-      .then(() => this.write(STORAGE_KEY, serialized))
+      .then(() => this.write(this.storageKey, serialized))
       .then(
         () => {
           if (revision === this.revision) result(null);

@@ -6,10 +6,12 @@ import { VoiceAudio } from "./VoiceAudio";
 import { VoiceSessionController, type TextHandoff, type VoiceUpdate } from "./VoiceSessionController";
 import { CognitoVoiceIdentity, type VoiceIdentity, type VoiceIdentityPort } from "./identity";
 import { voiceRelayUrl } from "./config";
+import { useSecuritySessionOptional } from "../../security/SecuritySessionProvider";
 
 const initial: VoiceUpdate = { state: "ready", microphoneActive: false };
 function useVoiceProduct(identityPort?: VoiceIdentityPort) {
-  const { setConsent: saveLocalConsent, consent: { voice: localVoiceConsent } } = useAI();
+  const shared = useSecuritySessionOptional();
+  const { setConsent: saveLocalConsent, consent: { voice: localVoiceConsent }, ready: localReady } = useAI();
   const path = usePathname();
   const previousPath = useRef(path);
   const access = useRef<VoiceIdentity | null>(null);
@@ -68,8 +70,9 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
     setConsent(null);
     setExpiresAt(0);
     setBusy(false);
-    if (identity) void auth.current.signOut(identity.token).catch(() => {});
-  }, [stop, clearHandoff]);
+    if (shared) shared.logout();
+    else if (identity) void auth.current.signOut(identity.token).catch(() => {});
+  }, [stop, clearHandoff, shared]);
   const refreshConsent = useCallback(async () => {
     const identity = access.current;
     const response = await fetch(`${voiceRelayUrl()}/api/voice/consent`, { headers: headers(), signal: AbortSignal.timeout(10000) });
@@ -81,6 +84,7 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
     saveLocalConsent("voice", result.allowed);
   }, [headers, saveLocalConsent]);
   const signIn = useCallback(async (email: string, password: string) => {
+    if (shared) return shared.signIn(email, password);
     const requestRevision = ++revision.current;
     setBusy(true);
     setError(null);
@@ -96,7 +100,7 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
       setError(cause instanceof Error ? cause.message : "VOICE_SIGN_IN_FAILED");
       throw cause;
     } finally { if (requestRevision === revision.current) setBusy(false); }
-  }, [refreshConsent]);
+  }, [refreshConsent, shared]);
   const setVoiceConsent = useCallback(async (allowed: boolean) => {
     const identity = access.current;
     if (!allowed) { stop(); clearHandoff(); setConsent(false); saveLocalConsent("voice", false); }
@@ -188,25 +192,39 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
   }, [headers, clearHandoff]);
 
   useEffect(() => {
-    if (!signedIn) return;
+    // Shared account mode has one authoritative expiry timer in its session provider.
+    if (!signedIn || shared) return;
     const timeout = setTimeout(logout, Math.max(0, expiresAt - Date.now()));
     return () => clearTimeout(timeout);
-  }, [signedIn, expiresAt, logout]);
+  }, [signedIn, expiresAt, logout, shared]);
   // These effects tear down external microphone/socket resources on access or route changes.
   // Their status updates reflect that imperative cleanup; deferring it would leave audio active.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (consent === true && !localVoiceConsent) {
+    if (!shared) return;
+    stop(); clearHandoff();
+    access.current = shared.identity;
+    setSignedIn(!!shared.identity);
+    setExpiresAt(shared.identity?.expiresAt ?? 0);
+    setConsent(null);
+    if (shared.identity && localReady) void refreshConsent().catch(() => setError("CONSENT_UNAVAILABLE"));
+  // Identity changes alone own this synchronization; snapshot refreshes must not stop voice.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared?.identity, localReady]);
+  const subscribe = shared?.subscribe;
+  useEffect(() => subscribe?.(() => { revision.current++; stop(); clearHandoff(); access.current = null; }), [subscribe, stop, clearHandoff]);
+  useEffect(() => {
+    if (localReady && consent === true && !localVoiceConsent) {
       void setVoiceConsent(false).catch(() => setError("CONSENT_REVOCATION_PENDING"));
     }
-  }, [localVoiceConsent, consent, setVoiceConsent]);
+  }, [localReady, localVoiceConsent, consent, setVoiceConsent]);
   useEffect(() => {
     const previous = previousPath.current;
     previousPath.current = path;
     if (previous === "/voice" && path !== "/voice") stop();
     if (!["/voice", "/chat"].includes(path)) clearHandoff();
-    if (["/sign-in", "/create-account", "/account-recovery", "/"].includes(path) && previous !== path) logout();
-  }, [path, stop, clearHandoff, logout]);
+    if (!shared && ["/sign-in", "/create-account", "/account-recovery", "/"].includes(path) && previous !== path) logout();
+  }, [path, stop, clearHandoff, logout, shared]);
   /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => {
     const cleanup = () => { stop(); clearHandoff(); };
@@ -220,8 +238,8 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
     return () => { subscription.remove(); cleanup(); };
   }, [stop, clearHandoff]);
   return { signedIn, busy, error, consent, update, handoff, textMode, start, stop, logout, signIn,
-    signUp: (email: string, password: string) => auth.current.signUp(email, password),
-    confirm: (email: string, code: string) => auth.current.confirm(email, code),
+    signUp: (email: string, password: string) => shared ? shared.signUp(email, password) : auth.current.signUp(email, password),
+    confirm: (email: string, code: string) => shared ? shared.confirm(email, code) : auth.current.confirm(email, code),
     refreshConsent, setVoiceConsent, switchToText, sendText, clearHandoff,
     mute: (muted: boolean) => controller.current?.setMuted(muted),
     interrupt: () => controller.current?.interrupt(),

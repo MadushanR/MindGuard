@@ -13,6 +13,8 @@ export {
 export type { ShareInput, SharedInformationRecord, RevocationState } from "./sharedInformation";
 export {
   createSimulatedSharingService,
+  createLiveSharingService,
+  type LiveSharingService,
   type SharingService,
   type SimulatedSharingService,
   type ShareErrorCode,

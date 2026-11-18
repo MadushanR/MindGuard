@@ -1,5 +1,12 @@
 # Screen 16: Privacy and Consent
 
+> In the configured app, voice consent uses the existing authenticated voice API
+> and the four additional choices use account-scoped DynamoDB security consent.
+> Local demo preferences are preserved but never promoted into server grants.
+> Sharing withdrawal blocks only new shares. See the root
+> `docs/SECURITY-INCREMENT.md`; the local-prototype detail below applies only to
+> standalone simulation composition. Screen 17 is implemented.
+
 `/privacy` is a thin wrapper for `screens/PrivacyConsentScreen.tsx`. Copy is editable in `packages/fixtures/security/privacy.json`. Shared Page, Toggle, MenuRow, Notice, theme and web-only responsive helpers match the AI and security screens. Back and Resources remain provided by AppShell.
 
 All toggles are drafts until **Save preferences**. Leaving discards unsaved edits; returning reloads current permissions. Voice, tone and chat observations use the AI feature's public `useAI().consent` and `setConsent` APIs. No AI files are changed. Enabling tone requires voice; disabling voice clears draft tone, and saving applies voice before tone. These choices affect existing AI simulations; no microphone or external service is enabled.

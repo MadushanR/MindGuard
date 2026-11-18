@@ -8,8 +8,12 @@ import {
 } from "./sharedInformation";
 import {
   createSimulatedSharingService,
+  createLiveSharingService,
+  type LiveSharingService,
   type RevokeServiceResult, type ShareErrorCode, type ShareServiceResult, type SharingService,
 } from "./sharingService";
+import { SecurityRequestError, useSecuritySessionOptional, type SecuritySession } from "./SecuritySessionProvider";
+import type { AccountShare } from "@mindguard/contracts";
 
 export type ShareSubmitResult =
   | { readonly status: "complete"; readonly record: SharedInformationRecord }
@@ -41,12 +45,16 @@ export interface SharedInformationContextValue {
   simulated: boolean;
   simulateFailure: boolean;
   setSimulateFailure(value: boolean): void;
+  incoming?: readonly (AccountShare & { sender: string })[];
+  refresh?: () => Promise<unknown>;
+  error?: string | null;
 }
 const Context = createContext<SharedInformationContextValue | null>(null);
 
 const TIMED_OUT = Symbol("timed out");
 /** Fingerprint of everything a share discloses, used to detect a reused requestId. */
-const sharePayload = (share: ShareInput) => JSON.stringify([share.recipientName, share.content]);
+const sharePayload = (share: ShareInput) => JSON.stringify([share.recipientName, share.content, share.destination ?
+  [share.destination.id, share.destination.name, share.destination.email, share.destination.relationship] : null]);
 function within<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => resolve(TIMED_OUT), ms);
@@ -60,6 +68,15 @@ function within<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OU
 export function SharedInformationProvider({
   children, service, timeoutMs = 15000,
 }: PropsWithChildren<{ service?: SharingService; timeoutMs?: number }>) {
+  const session = useSecuritySessionOptional();
+  if (service?.executionMode === "live") {
+    if (!session || !("getStatus" in service) || !("history" in service)) throw new Error("Live sharing requires the shared session and status/history adapter.");
+    return <LiveSharedInformationProvider session={session} service={service as LiveSharingService}>{children}</LiveSharedInformationProvider>;
+  }
+  if (session && !service) return <LiveSharedInformationProvider session={session}>{children}</LiveSharedInformationProvider>;
+  return <SimulatedSharedInformationProvider service={service} timeoutMs={timeoutMs}>{children}</SimulatedSharedInformationProvider>;
+}
+function SimulatedSharedInformationProvider({ children, service, timeoutMs = 15000 }: PropsWithChildren<{ service?: SharingService; timeoutMs?: number }>) {
   const [records, dispatch] = useReducer(sharedInformationReducer, []);
   const [simulateFailure, setSimulateFailureState] = useState(false);
   const [defaultService] = useState(() => createSimulatedSharingService());
@@ -70,6 +87,8 @@ export function SharedInformationProvider({
   // Incremented on clear so late responses from an ended session never change new state.
   const generation = useRef(0);
   const serviceIds = useRef(new Map<string, string>());
+  // Keep the binding after a transport rejection: the operation may have executed.
+  const requestPayloads = useRef(new Map<string, string>());
   const inFlight = useRef(new Map<string, { payload: string; request: Promise<ShareServiceResult> }>());
   const revokeRequests = useRef(new Map<string, string>());
   const revoking = useRef(new Set<string>());
@@ -93,6 +112,9 @@ export function SharedInformationProvider({
   ): Promise<ShareSubmitResult> => {
     const snapshot = normalizeShare(input);
     const payload = sharePayload(snapshot);
+    const previousPayload = requestPayloads.current.get(input.requestId);
+    if (previousPayload !== undefined && previousPayload !== payload) return { status: "failed", error: "CONFLICT" };
+    requestPayloads.current.set(input.requestId, payload);
     // A reused requestId is only a safe retry when its payload is identical; otherwise it
     // is a conflict and must never return or create a share for different content.
     const existing = latest.current.find((record) => record.requestId === input.requestId);
@@ -106,7 +128,7 @@ export function SharedInformationProvider({
     if (pending && pending.payload !== payload) return { status: "failed", error: "CONFLICT" };
     let request = pending?.request;
     if (!request) {
-      request = sharing.createShare({ ...snapshot, requestId: input.requestId });
+      request = (async () => sharing.createShare({ ...snapshot, requestId: input.requestId }))();
       inFlight.current.set(input.requestId, { payload, request });
       // Record a completed share even if the caller stopped waiting: it was accepted.
       void request.then((result) => {
@@ -121,7 +143,8 @@ export function SharedInformationProvider({
     try {
       result = await within(request, timeoutMs);
     } catch {
-      return generation.current === session ? { status: "failed", error: "UNAVAILABLE" } : { status: "stale" };
+      // A rejected connection does not prove the server rejected the operation.
+      return generation.current === session ? { status: "unknown" } : { status: "stale" };
     }
     if (generation.current !== session) return { status: "stale" };
     if (result === TIMED_OUT) return { status: "unknown" };
@@ -143,7 +166,8 @@ export function SharedInformationProvider({
       revokeRequests.current.set(id, requestId);
     }
     dispatch({ type: "revocation", id, state: "pending" });
-    const request = sharing.revokeShare(serviceIds.current.get(id) ?? id, requestId);
+    const serviceId = serviceIds.current.get(id) ?? id;
+    const request = (async () => sharing.revokeShare(serviceId, requestId))();
     // A late confirmation still completes revocation for the current session.
     void request.then((result) => {
       if (generation.current === session && result.status === "complete") {
@@ -155,7 +179,8 @@ export function SharedInformationProvider({
     try {
       result = await within(request, timeoutMs);
     } catch {
-      result = { status: "failed", error: "UNAVAILABLE" };
+      // Preserve uncertainty if the server response was lost after revocation.
+      result = TIMED_OUT;
     } finally {
       revoking.current.delete(id);
     }
@@ -175,6 +200,7 @@ export function SharedInformationProvider({
   const clearShareSession = useCallback(() => {
     generation.current += 1;
     serviceIds.current.clear();
+    requestPayloads.current.clear();
     inFlight.current.clear();
     revokeRequests.current.clear();
     revoking.current.clear();
@@ -188,9 +214,87 @@ export function SharedInformationProvider({
   }, [defaultService]);
   const value = useMemo(() => ({
     records, recordShare, submitShare, revokeShare, clearShareSession,
-    simulated: !service, simulateFailure, setSimulateFailure,
-  }), [records, recordShare, submitShare, revokeShare, clearShareSession, service, simulateFailure, setSimulateFailure]);
+    simulated: true, simulateFailure, setSimulateFailure,
+  }), [records, recordShare, submitShare, revokeShare, clearShareSession, simulateFailure, setSimulateFailure]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
+}
+function shareError(error: unknown): ShareErrorCode {
+  if (!(error instanceof SecurityRequestError)) return "UNAVAILABLE";
+  if (error.status === 401 || error.code === "SESSION_CHANGED") return "AUTH_REQUIRED";
+  if (error.code === "CONSENT_REQUIRED") return "CONSENT_REQUIRED";
+  if (error.code === "RECIPIENT_UNAVAILABLE") return "RECIPIENT_UNAVAILABLE";
+  if (error.code === "CONFLICT") return "CONFLICT";
+  if (error.code === "ACCOUNT_CAPACITY_REACHED") return "CAPACITY";
+  return error.status === 400 ? "INVALID" : "UNAVAILABLE";
+}
+function LiveSharedInformationProvider({ children, session, service }: PropsWithChildren<{ session: SecuritySession; service?: LiveSharingService }>) {
+  const adapter = useMemo(() => service ?? createLiveSharingService(session), [session, service]);
+  const bindings = useRef(new Map<string, string>());
+  const pending = useRef(new Map<string, Promise<ShareSubmitResult>>());
+  const revoking = useRef(new Set<string>());
+  const [revocations, setRevocations] = useState<Record<string, "pending" | "failed" | "unknown">>({});
+  const generation = useRef(0);
+  const clearShareSession = useCallback(() => { generation.current++; bindings.current.clear(); pending.current.clear(); setRevocations({}); }, []);
+  const subscribe = session.subscribe;
+  useEffect(() => subscribe(clearShareSession), [subscribe, clearShareSession]);
+  const records = (session.snapshot?.outgoing ?? []).filter(s => !s.revoked).map(s => ({ ...s, revocation: revocations[s.id] }));
+  const submitShare = useCallback(async (input: ShareInput & { requestId: string }): Promise<ShareSubmitResult> => {
+    if (!input.destination) return { status: "failed", error: "INVALID" };
+    const payload = sharePayload(input), previous = bindings.current.get(input.requestId);
+    if (previous && previous !== payload) return { status: "failed", error: "CONFLICT" };
+    bindings.current.set(input.requestId, payload);
+    const inFlight = pending.current.get(input.requestId);
+    if (inFlight) return inFlight;
+    const epoch = generation.current;
+    const task = (async (): Promise<ShareSubmitResult> => {
+      try {
+        // A repeat first reconciles the authoritative status, then safely reuses the ID.
+        const prior = previous ? await adapter.getStatus(input.requestId) : null;
+        const result = prior ? null : await adapter.createShare(input);
+        if (result?.status === "failed") return result;
+        const record = prior ?? (result?.status === "complete" ? result.record : null);
+        if (!record) return { status: "unknown" };
+        if (epoch !== generation.current) return { status: "stale" };
+        if (record.revoked) return { status: "failed", error: "CONFLICT" };
+        session.applyShareResult(record, session.identity?.session);
+        // The operation is confirmed even if the following history refresh fails.
+        await adapter.history().catch(() => {});
+        if (epoch !== generation.current) return { status: "stale" };
+        return { status: "complete", record };
+      } catch (e) {
+        if (epoch !== generation.current || (e instanceof SecurityRequestError && e.code === "SESSION_CHANGED")) return { status: "stale" };
+        if (!(e instanceof SecurityRequestError) || !e.status || e.status >= 500) return { status: "unknown" };
+        return { status: "failed", error: shareError(e) };
+      }
+    })();
+    pending.current.set(input.requestId, task);
+    void task.finally(() => { if (pending.current.get(input.requestId) === task) pending.current.delete(input.requestId); });
+    return task;
+  }, [adapter, session]);
+  const revokeShare = useCallback(async (id: string): Promise<RevokeResult> => {
+    if (revoking.current.has(id)) return { status: "pending" };
+    revoking.current.add(id); const epoch = generation.current;
+    setRevocations(v => ({ ...v, [id]: "pending" }));
+    try {
+      await adapter.revokeShare(id, `revoke-${id}`);
+      if (epoch !== generation.current) return { status: "stale" };
+      const record = session.snapshot?.outgoing.find(s => s.id === id);
+      if (record) session.applyShareResult({ ...record, revoked: true }, session.identity?.session);
+      await adapter.history().catch(() => {});
+      if (epoch !== generation.current) return { status: "stale" };
+      return { status: "complete" };
+    } catch (e) {
+      if (epoch !== generation.current || (e instanceof SecurityRequestError && e.code === "SESSION_CHANGED")) return { status: "stale" };
+      const unknown = !(e instanceof SecurityRequestError) || !e.status || e.status >= 500;
+      setRevocations(v => ({ ...v, [id]: unknown ? "unknown" : "failed" }));
+      return unknown ? { status: "unknown" } : { status: "failed", error: shareError(e) };
+    } finally { revoking.current.delete(id); }
+  }, [adapter, session]);
+  return <Context.Provider value={{ records, submitShare, revokeShare, clearShareSession,
+    recordShare: () => { throw new Error("Live shares require authenticated explicit confirmation."); },
+    simulated: false, simulateFailure: false, setSimulateFailure: () => {},
+    incoming: session.snapshot?.incoming ?? [], refresh: session.refresh, error: session.error,
+  }}>{children}</Context.Provider>;
 }
 export function useSharedInformation(): SharedInformationContextValue {
   const value = useContext(Context);

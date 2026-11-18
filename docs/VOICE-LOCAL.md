@@ -1,5 +1,10 @@
 # Run the voice increment locally
 
+The general `/sign-in` and `/create-account` flows now use the same Cognito session
+as `/voice`. See `SECURITY-INCREMENT.md`. Security/account/consent operations do
+not require an OpenAI key; starting real voice still does. The existing local
+Docker and CloudFormation foundation remain the shared development setup.
+
 Use the existing app and the existing AWS foundation. EKS migration is deferred to April 2027. The flexible AWS/OpenAI budgets are monthly; currency and exact cloud dates remain for the later deployment review.
 
 ## Start the complete Docker app

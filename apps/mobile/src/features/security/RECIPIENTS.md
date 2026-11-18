@@ -1,5 +1,11 @@
 # Trusted Contacts integration
 
+> Configured account mode now uses the authenticated security backend for
+> name/relationship records. The original local synthetic store is preserved and
+> is not migrated into an account. Sharing recipients and alert permissions remain
+> separate. See root `docs/SECURITY-INCREMENT.md`; details below describe the
+> preserved standalone local provider. Screen 14 is implemented.
+
 Screen 12 reads the `RecipientsProvider` mounted alongside `WellnessProvider` in
 the root layout. Zain's Screen 20 uses the public security API when opened from
 Trusted Contacts with `origin=trusted-contacts`:

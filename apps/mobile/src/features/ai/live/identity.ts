@@ -43,11 +43,17 @@ export class CognitoVoiceIdentity implements VoiceIdentityPort {
       throw new Error("VOICE_SIGN_IN_FAILED");
     return { token: auth.AccessToken, expiresAt: Date.now() + auth.ExpiresIn * 1000 };
   }
-  async signUp(email: string, password: string) {
-    await this.call("SignUp", { ClientId: this.clientId, Username: email.trim(), Password: password, UserAttributes: [{ Name: "email", Value: email.trim() }] });
+  async signUp(email: string, password: string, name?: string) {
+    await this.call("SignUp", { ClientId: this.clientId, Username: email.trim(), Password: password, UserAttributes: [{ Name: "email", Value: email.trim() }, ...(name?.trim() ? [{ Name: "name", Value: name.trim() }] : [])] });
   }
   async confirm(email: string, code: string) {
     await this.call("ConfirmSignUp", { ClientId: this.clientId, Username: email.trim(), ConfirmationCode: code.trim() });
+  }
+  async recover(email: string) {
+    await this.call("ForgotPassword", { ClientId: this.clientId, Username: email.trim() });
+  }
+  async resetPassword(email: string, code: string, password: string) {
+    await this.call("ConfirmForgotPassword", { ClientId: this.clientId, Username: email.trim(), ConfirmationCode: code.trim(), Password: password });
   }
   async signOut(token: string) {
     await this.call("GlobalSignOut", { AccessToken: token });

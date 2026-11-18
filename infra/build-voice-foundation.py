@@ -14,7 +14,8 @@ template = {
         'VoiceUsers': {
             'Type': 'AWS::Cognito::UserPool', 'DeletionPolicy': 'Retain', 'UpdateReplacePolicy': 'Retain',
             'Properties': {'UserPoolName': 'mindguard-voice-users', 'UsernameAttributes': ['email'],
-                'AutoVerifiedAttributes': ['email'], 'AdminCreateUserConfig': {'AllowAdminCreateUserOnly': True},
+                'AutoVerifiedAttributes': ['email'], 'AdminCreateUserConfig': {'AllowAdminCreateUserOnly': False},
+                'AccountRecoverySetting': {'RecoveryMechanisms': [{'Priority': 1, 'Name': 'verified_email'}]},
                 'MfaConfiguration': 'OFF', 'Policies': {'PasswordPolicy': {'MinimumLength': 12,
                     'RequireUppercase': True, 'RequireLowercase': True, 'RequireNumbers': True,
                     'RequireSymbols': True, 'TemporaryPasswordValidityDays': 1}},
@@ -71,7 +72,7 @@ policy = {'Version': '2012-10-17', 'Statement': [
     statement('VoiceConsentTable', ['dynamodb:CreateTable', 'dynamodb:DescribeTable', 'dynamodb:UpdateTable',
         'dynamodb:DeleteTable', 'dynamodb:DescribeTimeToLive', 'dynamodb:UpdateTimeToLive',
         'dynamodb:ListTagsOfResource', 'dynamodb:TagResource', 'dynamodb:UntagResource',
-        'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query', 'dynamodb:DeleteItem'],
         f'arn:aws:dynamodb:{REGION}:{ACCOUNT}:table/mindguard-voice-access'),
     statement('VoiceImageRepository', ['ecr:CreateRepository', 'ecr:DescribeRepositories', 'ecr:DeleteRepository',
         'ecr:PutImageScanningConfiguration', 'ecr:PutImageTagMutability', 'ecr:ListTagsForResource',

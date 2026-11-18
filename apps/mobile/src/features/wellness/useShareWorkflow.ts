@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readSharingConsent, useSharedInformation, type ShareErrorCode } from "../security";
 import { buildSharePreview, type SharePreview } from "./sharing";
 import { useWellness } from "./state";
+import { useSecuritySessionOptional } from "../security/SecuritySessionProvider";
 
 /**
  * UC-10 client workflow (diagram role: ShareWorkflowController). It coordinates the
@@ -27,6 +28,8 @@ const reviewable = (phase: SharePhase) =>
 export function useShareWorkflow() {
   const w = useWellness();
   const shares = useSharedInformation();
+  const account = useSecuritySessionOptional();
+  const readConsent = useCallback(async () => account ? (await account.refresh()).preferences.sharing : readSharingConsent(), [account]);
   const current = useMemo(() => buildSharePreview({
     destinationId: w.destination, recipients: w.recipients, selected: w.selected,
     available: w.available, device: w.device,
@@ -69,7 +72,7 @@ export function useShareWorkflow() {
     setPhase({ kind: "checking" });
     try {
       let allowed: boolean;
-      try { allowed = await readSharingConsent(); } catch {
+      try { allowed = await readConsent(); } catch {
         if (live(token)) setPhase({ kind: "denied", reason: "consent-unavailable" });
         return;
       }
@@ -81,7 +84,7 @@ export function useShareWorkflow() {
     } finally {
       if (live(token)) busy.current = false;
     }
-  }, [live, setPhase]);
+  }, [live, setPhase, readConsent]);
 
   const confirm = useCallback(async () => {
     const p = phaseRef.current;
@@ -96,14 +99,16 @@ export function useShareWorkflow() {
     setPhase({ kind: "submitting", preview: snapshot, requestId });
     try {
       let allowed: boolean;
-      try { allowed = await readSharingConsent(); } catch {
+      try { allowed = await readConsent(); } catch {
         if (live(token)) setPhase({ kind: "denied", reason: "consent-unavailable" });
         return;
       }
       if (!live(token)) return;
       if (!allowed) { setPhase({ kind: "denied", reason: "consent" }); return; }
       if (currentRef.current?.key !== snapshot.key) { setPhase({ kind: "invalidated" }); return; }
-      const result = await shares.submitShare({ requestId, recipientName: recipient.name, content: snapshot.content });
+      const result = await shares.submitShare({ requestId, recipientName: recipient.name, content: snapshot.content,
+        ...(account ? { destination: { ...recipient } } : {}),
+      });
       if (!live(token)) return;
       if (result.status === "complete") setPhase({ kind: "succeeded", preview: snapshot });
       else if (result.status === "failed") setPhase({ kind: "failed", preview: snapshot, requestId, error: result.error });
@@ -112,7 +117,7 @@ export function useShareWorkflow() {
     } finally {
       if (live(token)) busy.current = false;
     }
-  }, [live, setPhase, shares]);
+  }, [live, setPhase, shares, readConsent, account]);
 
   const close = useCallback(() => {
     const p = phaseRef.current;

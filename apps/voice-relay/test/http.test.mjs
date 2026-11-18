@@ -60,5 +60,18 @@ test("approval flag cannot make the synthetic policy ready for live processing",
   const readiness = await fetch(base + "/ready");
   assert.equal(readiness.status, 503);
   assert.ok((await readiness.json()).missing.includes("VOICE_POLICY_OR_ACCESS_CONFIGURATION"));
-  assert.equal((await fetch(base + "/consent")).status, 503);
+  // Identity/consent remains independently authenticated; invalid policy must
+  // still prevent all voice processing, rather than block account preferences.
+  assert.equal((await fetch(base + "/consent")).status, 401);
+  assert.equal((await fetch(base + "/sessions", { method: "POST" })).status, 503);
+});
+
+test("missing OpenAI key does not disable account and consent authentication", async t => {
+  const base = await startRelay(t, {
+    COGNITO_ISSUER: "https://cognito-idp.ca-central-1.amazonaws.com/synthetic",
+    COGNITO_CLIENT_ID: "synthetic-client", VOICE_TABLE: "synthetic-table",
+  });
+  assert.equal((await fetch(base + "/consent")).status, 401);
+  assert.equal((await fetch(base.replace('/voice', '/security') + '/snapshot')).status, 401);
+  assert.equal((await fetch(base + "/sessions", { method: "POST" })).status, 503);
 });
