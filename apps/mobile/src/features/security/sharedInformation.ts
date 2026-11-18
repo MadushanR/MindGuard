@@ -2,8 +2,11 @@ export interface ShareInput {
   readonly recipientName: string;
   readonly content: readonly string[];
 }
-/** Revocation in progress or last attempt failed; absent means access is still active. */
-export type RevocationState = "pending" | "failed";
+/**
+ * Revocation in progress, last attempt failed (access unchanged), or no answer arrived
+ * (outcome unknown: access may or may not have ended). Absent means access is active.
+ */
+export type RevocationState = "pending" | "failed" | "unknown";
 export interface SharedInformationRecord extends ShareInput {
   readonly id: string;
   readonly createdAt: number;

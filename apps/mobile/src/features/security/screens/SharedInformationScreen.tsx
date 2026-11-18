@@ -46,7 +46,8 @@ export function SharedInformationScreen() {
                 <Copy kind="caption">{copy.demoLabel}</Copy>
                 {record.revocation ? (
                   <Copy kind="caption">
-                    {record.revocation === "pending" ? copy.revokePendingLabel : copy.revokeFailedLabel}
+                    {record.revocation === "pending" ? copy.revokePendingLabel
+                      : record.revocation === "unknown" ? copy.revokeUnknownLabel : copy.revokeFailedLabel}
                   </Copy>
                 ) : null}
                 <Button
@@ -94,11 +95,15 @@ export function SharedInformationScreen() {
               <Copy>{copy.revokeDescription}</Copy>
               <Copy kind="caption">{copy.copiesNotice}</Copy>
               {selected.revocation === "pending" ? <Notice>{copy.revokePending}</Notice> : null}
-              {revokeError ? (
-                <Notice error>{revokeError === "unknown" ? copy.revokeUnknown : copy.revokeFailed}</Notice>
+              {/* Derived from the record so the state survives closing and reopening the dialog. */}
+              {revokeError || selected.revocation === "failed" || selected.revocation === "unknown" ? (
+                <Notice error>
+                  {(revokeError ?? selected.revocation) === "unknown" ? copy.revokeUnknown : copy.revokeFailed}
+                </Notice>
               ) : null}
               <Button
-                label={selected.revocation === "pending" ? "Revoking…" : revokeError ? "Try revoking again" : "Confirm revoke access"}
+                label={selected.revocation === "pending" ? "Revoking…"
+                  : revokeError || selected.revocation ? "Try revoking again" : "Confirm revoke access"}
                 kind="danger"
                 disabled={selected.revocation === "pending"}
                 onPress={() => { void confirmRevoke(selected.id); }}

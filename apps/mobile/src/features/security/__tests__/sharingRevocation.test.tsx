@@ -2,7 +2,10 @@ import { useEffect, type PropsWithChildren } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AIProvider } from "../../ai";
-import { SharedInformationProvider, useSharedInformation, type RevokeServiceResult, type SharingService } from "..";
+import {
+  SharedInformationProvider, useSharedInformation,
+  type RevokeServiceResult, type ShareServiceResult, type SharingService,
+} from "..";
 import { SharedInformationScreen } from "../screens/SharedInformationScreen";
 import copy from "../../../../../../packages/fixtures/security/shared-information.json";
 
@@ -91,5 +94,65 @@ test("no response is reported as unknown, never as revoked", async () => {
   await fireEvent.press(screen.getByLabelText("Confirm revoke access"));
   expect(await screen.findByText(copy.revokeUnknown)).toBeTruthy();
   expect(shares.records).toHaveLength(1);
+  expect(shares.records[0].revocation).toBe("unknown");
+  expect(screen.getByText(copy.revokeUnknownLabel)).toBeTruthy();
+  // Unknown must not be presented as a definite failure ("access unchanged").
+  expect(screen.queryByText(copy.revokeFailedLabel)).toBeNull();
   expect(screen.queryByText(copy.revokedNotice)).toBeNull();
+  // Reopening the dialog keeps the unknown state and offers a safe retry.
+  await fireEvent.press(screen.getByLabelText("Cancel"));
+  await openRevoke();
+  expect(screen.getByText(copy.revokeUnknown)).toBeTruthy();
+  expect(screen.getByLabelText("Try revoking again")).toBeTruthy();
+});
+
+test("a late confirmation after an unknown revocation outcome removes the share once", async () => {
+  let finish!: (value: RevokeServiceResult) => void;
+  const service = revokeService([() => new Promise((resolve) => { finish = resolve; })]);
+  await renderHistory(service, 30);
+  await openRevoke();
+  await fireEvent.press(screen.getByLabelText("Confirm revoke access"));
+  await screen.findByText(copy.revokeUnknownLabel);
+  await act(async () => finish({ status: "complete", executionMode: "simulated" }));
+  await waitFor(() => expect(shares.records).toEqual([]));
+  expect(service.revokeShare).toHaveBeenCalledTimes(1);
+});
+
+describe("request ID and payload checks", () => {
+  const share = { requestId: "r1", recipientName: "Alex Demo", content: ["Synthetic steps"] };
+  test("an identical retry returns the existing share; a different payload is a conflict", async () => {
+    const service = revokeService([]);
+    await renderHistory(service);
+    await act(async () => {
+      expect((await shares.submitShare(share)).status).toBe("complete");
+      expect(await shares.submitShare({ ...share, content: ["Synthetic sleep"] })).toEqual({ status: "failed", error: "CONFLICT" });
+      expect(await shares.submitShare({ ...share, recipientName: "Sam Example" })).toEqual({ status: "failed", error: "CONFLICT" });
+    });
+    expect(service.createShare).toHaveBeenCalledTimes(1);
+    expect(shares.records).toHaveLength(1);
+    expect(shares.records[0].content).toEqual(["Synthetic steps"]);
+  });
+  test("a different payload under an in-flight requestId is rejected and never recorded", async () => {
+    let finish!: (value: ShareServiceResult) => void;
+    const service: SharingService = {
+      createShare: jest.fn(() => new Promise<ShareServiceResult>((resolve) => { finish = resolve; })),
+      revokeShare: jest.fn(),
+    };
+    await render(<SharedInformationScreen />, {
+      wrapper: ({ children }: PropsWithChildren) => (
+        <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}>
+          <AIProvider><SharedInformationProvider service={service}><Capture>{children}</Capture></SharedInformationProvider></AIProvider>
+        </SafeAreaProvider>
+      ),
+    });
+    let first!: Promise<unknown>;
+    await act(async () => {
+      first = shares.submitShare(share);
+      expect(await shares.submitShare({ ...share, content: ["Synthetic sleep"] })).toEqual({ status: "failed", error: "CONFLICT" });
+    });
+    await act(async () => { finish({ status: "complete", shareId: "s1", executionMode: "simulated" }); await first; });
+    expect(service.createShare).toHaveBeenCalledTimes(1);
+    expect(shares.records).toHaveLength(1);
+    expect(shares.records[0].content).toEqual(["Synthetic steps"]);
+  });
 });

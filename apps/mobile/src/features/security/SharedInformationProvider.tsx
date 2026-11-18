@@ -45,6 +45,8 @@ export interface SharedInformationContextValue {
 const Context = createContext<SharedInformationContextValue | null>(null);
 
 const TIMED_OUT = Symbol("timed out");
+/** Fingerprint of everything a share discloses, used to detect a reused requestId. */
+const sharePayload = (share: ShareInput) => JSON.stringify([share.recipientName, share.content]);
 function within<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => resolve(TIMED_OUT), ms);
@@ -68,7 +70,7 @@ export function SharedInformationProvider({
   // Incremented on clear so late responses from an ended session never change new state.
   const generation = useRef(0);
   const serviceIds = useRef(new Map<string, string>());
-  const inFlight = useRef(new Map<string, Promise<ShareServiceResult>>());
+  const inFlight = useRef(new Map<string, { payload: string; request: Promise<ShareServiceResult> }>());
   const revokeRequests = useRef(new Map<string, string>());
   const revoking = useRef(new Set<string>());
 
@@ -90,13 +92,22 @@ export function SharedInformationProvider({
     input: ShareInput & { readonly requestId: string },
   ): Promise<ShareSubmitResult> => {
     const snapshot = normalizeShare(input);
+    const payload = sharePayload(snapshot);
+    // A reused requestId is only a safe retry when its payload is identical; otherwise it
+    // is a conflict and must never return or create a share for different content.
     const existing = latest.current.find((record) => record.requestId === input.requestId);
-    if (existing) return { status: "complete", record: existing };
+    if (existing) {
+      return sharePayload(existing) === payload
+        ? { status: "complete", record: existing }
+        : { status: "failed", error: "CONFLICT" };
+    }
     const session = generation.current;
-    let request = inFlight.current.get(input.requestId);
+    const pending = inFlight.current.get(input.requestId);
+    if (pending && pending.payload !== payload) return { status: "failed", error: "CONFLICT" };
+    let request = pending?.request;
     if (!request) {
       request = sharing.createShare({ ...snapshot, requestId: input.requestId });
-      inFlight.current.set(input.requestId, request);
+      inFlight.current.set(input.requestId, { payload, request });
       // Record a completed share even if the caller stopped waiting: it was accepted.
       void request.then((result) => {
         if (generation.current !== session || result.status !== "complete") return;
@@ -150,7 +161,8 @@ export function SharedInformationProvider({
     }
     if (generation.current !== session) return { status: "stale" };
     if (result === TIMED_OUT) {
-      dispatch({ type: "revocation", id, state: "failed" });
+      // Not "failed": the service may have revoked access without answering in time.
+      dispatch({ type: "revocation", id, state: "unknown" });
       return { status: "unknown" };
     }
     if (result.status === "failed") {
