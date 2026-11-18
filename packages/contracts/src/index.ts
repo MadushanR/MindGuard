@@ -1,3 +1,4 @@
+export type { AccountPreferences, ShareDestination, AccountShare, AccountContact, AccountSavedCategory, AccountAlert, SecuritySnapshot } from "./security";
 export type Emotion = "Calm" | "Tense" | "Low" | "Hopeful";
 export type Retention = 7 | 30 | 90 | "manual" | null;
 export type VoiceState =

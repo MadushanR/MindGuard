@@ -1,5 +1,6 @@
-import { useCallback, useReducer } from "react";
-import { router, useFocusEffect } from "expo-router";
+import { useCallback, useReducer, useState } from "react";
+import { useSecuritySessionOptional } from "../SecuritySessionProvider";
+import { router, useFocusEffect, useRouter } from "expo-router";
 import { Keyboard, StyleSheet, View } from "react-native";
 import copy from "../../../../../../packages/fixtures/security/sign-in.json";
 import { useAI } from "../../ai";
@@ -11,6 +12,7 @@ import {
   Field,
   Intro,
   Notice,
+  Dialog,
   Toggle,
   ZenOrb,
 } from "../../../shared/ui";
@@ -25,6 +27,12 @@ import {
 } from "../signIn";
 
 export function SignInScreen() {
+  const navigation = useRouter();
+  const session = useSecuritySessionOptional();
+  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const [confirmation, setConfirmation] = useState(false);
+  const [code, setCode] = useState("");
   const [state, dispatch] = useReducer(signInReducer, initialSignInState);
   const { desktop } = useBrowserLayout();
   const { model } = useAI();
@@ -34,17 +42,29 @@ export function SignInScreen() {
   const errors = state.submitted ? validateSignIn(state.fields) : {};
   const edit = (field: keyof SignInFields) => (value: string) =>
     dispatch({ type: "edit", field, value });
-  const submit = () => {
+  const submit = async () => {
+    if (working) return;
     Keyboard.dismiss();
     const valid = Object.keys(validateSignIn(state.fields)).length === 0;
     dispatch({ type: "submit" });
     // A local UI simulation only; no account session or stored identity is created.
-    if (valid) router.replace(route(5));
+    if (valid) {
+      setWorking(true); setError(null);
+      try {
+        if (session) await session.signIn(state.fields.email, state.fields.password);
+        dispatch({ type: "leave" });
+        navigation.replace(route(5));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Sign-in unavailable. Please retry.");
+        if (e instanceof Error && e.message === "ACCOUNT_CONFIRMATION_REQUIRED") setConfirmation(true);
+      }
+      finally { setWorking(false); }
+    }
   };
 
   useFocusEffect(
     useCallback(() => {
-      return () => dispatch({ type: "leave" });
+      return () => { dispatch({ type: "leave" }); setConfirmation(false); setCode(""); };
     }, []),
   );
 
@@ -101,8 +121,9 @@ export function SignInScreen() {
             />
           </Card>
           <Copy kind="muted">{copy.passwordHint}</Copy>
-          <Notice>{copy.demoNotice}</Notice>
-          <Button label="Sign in" kind="primary" onPress={submit} />
+          <Notice>{session ? "Sign in once for your account, sharing and voice. Credentials stay in memory for this session." : copy.demoNotice}</Notice>
+          {error || session?.error ? <Notice error>{error ?? session?.error}</Notice> : null}
+          <Button label="Sign in" kind="primary" disabled={working || session?.busy} onPress={() => void submit()} />
           <Copy center kind="muted">
             {copy.createAccountPrompt}
           </Copy>
@@ -113,6 +134,15 @@ export function SignInScreen() {
           />
         </View>
       </View>
+      {confirmation && session ? <Dialog title="Confirm your account email" onClose={() => { setConfirmation(false); setCode(""); }}>
+        <Field label="Email confirmation code" value={code} onChangeText={setCode} autoComplete="one-time-code" keyboardType="number-pad" />
+        {error ? <Notice error>{error}</Notice> : null}
+        <Button label="Confirm email" disabled={working || !code.trim()} onPress={() => {
+          setWorking(true); setError(null);
+          void session.confirm(state.fields.email, code).then(() => { setConfirmation(false); setCode(""); })
+            .catch(e => setError(e instanceof Error ? e.message : "Confirmation unavailable.")).finally(() => setWorking(false));
+        }} />
+      </Dialog> : null}
     </Page>
   );
 }

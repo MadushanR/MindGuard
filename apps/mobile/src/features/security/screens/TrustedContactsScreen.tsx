@@ -8,17 +8,22 @@ import { ResponsiveGrid } from "../../../shared/responsive";
 import { colors } from "../../../shared/theme";
 import { useRecipients } from "../RecipientsProvider";
 import { recipientRelationshipLabel } from "../recipients";
+import { useSecuritySessionOptional } from "../SecuritySessionProvider";
 
 export function TrustedContactsScreen() {
+  const account = useSecuritySessionOptional();
   const { recipients, ready, readError, writeError, saving, restoreRecipients } =
     useRecipients();
   return (
     <Page wide>
       <Intro {...copy} />
+      {account ? <Notice>{account.identity ? "Contacts are saved to your signed-in account. Adding a contact grants neither sharing access nor alert permission." : "Sign in to open your account's contacts. Existing synthetic device contacts stay separate."}</Notice> : null}
+      {account && !account.identity ? <Button label="Sign in" onPress={() => router.push(route(3))} /> : null}
       <Button
         label="Add recipient"
         kind="primary"
         icon="user"
+        disabled={!!account && !account.identity}
         onPress={() => router.push({
           pathname: route(20) as "/add-recipient",
           params: { origin: "trusted-contacts" },

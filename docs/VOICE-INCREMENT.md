@@ -1,5 +1,12 @@
 # FA3 voice increment — UC-04 and UC-13
 
+> Shared-account integration now reuses the Cognito adapter through
+> `SecuritySessionProvider`; a second voice sign-in is not needed after general
+> sign-in. Identity/consent remains independent of provider readiness. Voice
+> processing still requires the reviewed policy and configured OpenAI key.
+> See `SECURITY-INCREMENT.md`; the voice-only account description below records
+> the original FA3 baseline.
+
 Current work: November 16, 2026. The earlier implementation checkpoint is preserved in `archive/VOICE-CHECKPOINT-2026-11-15.md`.
 
 ## Scope and decisions

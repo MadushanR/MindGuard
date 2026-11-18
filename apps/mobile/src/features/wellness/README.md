@@ -18,7 +18,16 @@ Start at Data Sources, connect the demo watch, explicitly allow a metric, then *
 
 In Export and Share, select records and add an invented recipient. Invalid fields show inline text. Save returns to the originating screen and selects the recipient when opened from sharing. Cancel preserves previous share choices. Recipients confer no trusted-contact or notification status.
 
-### UC-10: share and revoke selected information (simulated)
+### UC-10: configured live integration and preserved simulation
+
+The root app now connects this workflow to Munsif's authenticated AWS adapter.
+Recipient sharing grants controlled in-app access to the reviewed verified account,
+with durable request IDs, history, status reconciliation and owner revocation.
+Sharing consent withdrawal blocks new shares without revoking earlier ones.
+Measurements stay synthetic; export stays an explicitly simulated local preview.
+See root `docs/SECURITY-INCREMENT.md` and `docs/SECURITY-VERIFICATION.md` for the
+current setup and tests. The simulation-specific details and older gap list below
+describe standalone/test composition and the pre-integration baseline.
 
 Flow: select permitted records → choose a destination → review the exact preview → explicitly confirm → truthful result → review in Shared Information (14) → request revocation → confirmed outcome. Nothing is ever sent; the only sharing service is the security module's labelled, session-only simulated adapter.
 

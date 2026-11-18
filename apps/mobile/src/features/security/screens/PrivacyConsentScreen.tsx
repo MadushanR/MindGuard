@@ -13,9 +13,15 @@ import {
   changePrivacyDraft, parseDemoPreferences, PRIVACY_STORAGE_KEY,
   serializeDemoPreferences, type PrivacyDraft,
 } from "../privacy";
+import { useSecuritySessionOptional } from "../SecuritySessionProvider";
+import { useLiveVoiceOptional } from "../../ai/live/LiveVoiceProvider";
 
 export function PrivacyConsentScreen() {
   const ai = useAI();
+  const session = useSecuritySessionOptional();
+  const voice = useLiveVoiceOptional();
+  const account = useRef(session);
+  useEffect(() => { account.current = session; }, [session]);
   const currentAI = useRef(ai);
   useEffect(() => { currentAI.current = ai; }, [ai]);
   const { desktop } = useBrowserLayout();
@@ -36,6 +42,13 @@ export function PrivacyConsentScreen() {
     setSubmitted(false);
     setSaving(busy.current);
     if (ai.ready) {
+      if (account.current) {
+        void account.current.refresh().then(value => {
+          if (focused.current && generation === readGeneration.current) setDraft({ ...currentAI.current.consent,
+            voice: voice?.consent === true, ...value.preferences });
+        }).catch(() => { if (focused.current && generation === readGeneration.current) setReadError(true); });
+        return;
+      }
       void AsyncStorage.getItem(PRIVACY_STORAGE_KEY).then((raw) => {
         const preferences = parseDemoPreferences(raw);
         if (focused.current && generation === readGeneration.current) {
@@ -45,7 +58,7 @@ export function PrivacyConsentScreen() {
         if (focused.current && generation === readGeneration.current) setReadError(true);
       });
     }
-  }, [ai.ready]);
+  }, [ai.ready, voice?.consent]);
   useFocusEffect(useCallback(() => {
     focused.current = true;
     load();
@@ -65,7 +78,14 @@ export function PrivacyConsentScreen() {
     setWriteError(false);
     try {
       // A failed local write leaves the existing AI permissions unchanged.
-      await AsyncStorage.setItem(PRIVACY_STORAGE_KEY, serializeDemoPreferences(draft));
+      if (session) {
+        // Revocation stops capture/playback before any awaited storage/network work.
+        if (!draft.voice) { voice?.stop(); voice?.clearHandoff(); }
+        if (voice && voice.consent !== draft.voice) await voice.setVoiceConsent(draft.voice);
+        await session.request("/consent", "PUT", { wellnessData: draft.wellnessData, saveSummaries: draft.saveSummaries,
+          sharing: draft.sharing, contactNotifications: draft.contactNotifications });
+        await session.refresh();
+      } else await AsyncStorage.setItem(PRIVACY_STORAGE_KEY, serializeDemoPreferences(draft));
       const controller = currentAI.current;
       // Order matters: voice must be enabled before enabling tone.
       controller.setConsent("voice", draft.voice);
@@ -103,7 +123,7 @@ export function PrivacyConsentScreen() {
               </View>
             ))}
             <Copy kind="caption">{copy.toneNotice}</Copy>
-            <Notice>{copy.demoNotice}</Notice>
+            <Notice>{session ? "These four choices are saved to your signed-in account. Sharing requires wellness-data consent too. Turning Sharing off prevents new shares; revoke existing shares in Shared information. In-app alerts also require the recipient's explicit sender permission. Tone and chat observations remain simulations. Voice sends microphone audio through the relay to OpenAI; application audio and transcripts are not saved, and provider processing terms still apply." : copy.demoNotice}</Notice>
             {(["wellnessData", "saveSummaries", "sharing", "contactNotifications"] as const).map((key) => (
               <View key={key}>
                 <Toggle {...copy[key]} value={draft[key]} disabled={locked}
@@ -112,9 +132,9 @@ export function PrivacyConsentScreen() {
               </View>
             ))}
           </> : null}
-          {writeError ? <Notice error>{copy.writeError}</Notice> : null}
+          {writeError ? <Notice error>{session ? "Preferences could not be confirmed. Some changes may have reached the server. Voice stays stopped if you withdrew consent. Reload the preferences to reconcile before retrying." : copy.writeError}</Notice> : null}
           {submitted ? <Notice error={!!ai.writeError}>
-            {ai.writeError ? copy.aiWriteError : ai.saving ? copy.saving : copy.saved}
+            {ai.writeError ? copy.aiWriteError : ai.saving ? copy.saving : session ? "Privacy preferences saved to your account." : copy.saved}
           </Notice> : null}
           <Button label="Save preferences" kind="primary" disabled={!draft || locked || !ai.ready}
             onPress={() => { void save(); }} />

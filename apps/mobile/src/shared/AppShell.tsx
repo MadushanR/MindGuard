@@ -195,16 +195,16 @@ export function AppShell({ children }: PropsWithChildren) {
                 </>
               ) : null}
             </View>
-          ) : (
-            <>
-              {ai.writeError ? (
+          ) : null}
+              {ai.ready && !fixtureErrors.length && ai.writeError ? (
                 <View style={{ padding: 12, gap: 8 }}>
                   <Notice error>{screenCopy.common.storageWriteError}</Notice>
                   <Button label="Retry saving" onPress={ai.retryStorage} />
                 </View>
               ) : null}
-              <View style={{ flex: 1, minHeight: 0 }}>{children}</View>
-              {!desktop && !signedOut && !focused ? (
+              {/* Keep Expo's navigator mounted while an account cache loads. */}
+              <View style={{ flex: 1, minHeight: 0, display: ai.ready && !fixtureErrors.length ? "flex" : "none" }}>{children}</View>
+              {ai.ready && !fixtureErrors.length && !desktop && !signedOut && !focused ? (
                 <View style={shell.nav}>
                   {(
                     [
@@ -236,8 +236,6 @@ export function AppShell({ children }: PropsWithChildren) {
                   ))}
                 </View>
               ) : null}
-            </>
-          )}
           {review && __DEV__ ? (
             <Dialog
               title={

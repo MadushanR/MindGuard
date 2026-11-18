@@ -1,4 +1,5 @@
 export interface ShareInput {
+  readonly destination?: import("@mindguard/contracts").ShareDestination;
   readonly recipientName: string;
   readonly content: readonly string[];
 }
@@ -30,6 +31,7 @@ export function normalizeShare(input: ShareInput): ShareInput {
   return {
     recipientName: input.recipientName.trim(),
     content: input.content.map((line) => line.trim()),
+    ...(input.destination ? { destination: { ...input.destination } } : {}),
   };
 }
 

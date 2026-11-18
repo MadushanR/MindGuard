@@ -15,7 +15,15 @@
           "email"
         ],
         "AdminCreateUserConfig": {
-          "AllowAdminCreateUserOnly": true
+          "AllowAdminCreateUserOnly": false
+        },
+        "AccountRecoverySetting": {
+          "RecoveryMechanisms": [
+            {
+              "Priority": 1,
+              "Name": "verified_email"
+            }
+          ]
         },
         "MfaConfiguration": "OFF",
         "Policies": {

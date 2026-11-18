@@ -84,7 +84,9 @@
         "dynamodb:UntagResource",
         "dynamodb:GetItem",
         "dynamodb:PutItem",
-        "dynamodb:UpdateItem"
+        "dynamodb:UpdateItem",
+        "dynamodb:Query",
+        "dynamodb:DeleteItem"
       ],
       "Resource": "arn:aws:dynamodb:ca-central-1:950801850836:table/mindguard-voice-access"
     },

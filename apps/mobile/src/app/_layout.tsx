@@ -6,10 +6,15 @@ import { LiveVoiceProvider } from "../features/ai/live/LiveVoiceProvider";
 import { AppShell } from "../shared/AppShell";
 import { WellnessProvider } from "../features/wellness";
 import { RecipientsProvider, SavedInformationProvider, SharedInformationProvider } from "../features/security";
+import { SecuritySessionProvider, useSecuritySession } from "../features/security/SecuritySessionProvider";
 export default function RootLayout() {
+  return <SecuritySessionProvider persistent><AccountLayout /></SecuritySessionProvider>;
+}
+function AccountLayout() {
+  const { identity } = useSecuritySession();
   return (
     <SafeAreaProvider>
-      <AIProvider>
+      <AIProvider storageKey={identity ? `mindguard.account.${identity.owner}.ai.v1` : undefined}>
         <LiveVoiceProvider>
           <WellnessProvider>
             <RecipientsProvider>

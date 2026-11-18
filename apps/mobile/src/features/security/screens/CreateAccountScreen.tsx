@@ -1,4 +1,5 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, useState } from "react";
+import { useSecuritySessionOptional } from "../SecuritySessionProvider";
 import { router, useFocusEffect } from "expo-router";
 import { Keyboard, StyleSheet, View } from "react-native";
 import copy from "../../../../../../packages/fixtures/security/create-account.json";
@@ -25,6 +26,12 @@ import {
 } from "../createAccount";
 
 export function CreateAccountScreen() {
+  const session = useSecuritySessionOptional();
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const [created, setCreated] = useState(false);
   const [state, dispatch] = useReducer(accountReducer, initialAccountState);
   const { desktop } = useBrowserLayout();
   const { model } = useAI();
@@ -32,14 +39,25 @@ export function CreateAccountScreen() {
   const errors = state.submitted ? validateAccount(state.fields) : {};
   const edit = (field: keyof AccountFields) => (value: string) =>
     dispatch({ type: "edit", field, value });
-  const submit = () => {
+  const submit = async () => {
     Keyboard.dismiss();
+    if (working) return;
+    if (session) {
+      if (Object.keys(validateAccount(state.fields)).length) { dispatch({ type: "submit" }); return; }
+      setWorking(true); setError(null);
+      try {
+        await session.signUp(state.fields.email, state.fields.password, state.fields.fullName);
+        setConfirmEmail(state.fields.email); dispatch({ type: "leave" });
+      } catch (e) { setError(e instanceof Error ? e.message : "Account creation unavailable."); }
+      finally { setWorking(false); }
+      return;
+    }
     dispatch({ type: "submit" });
   };
 
   useFocusEffect(
     useCallback(() => {
-      return () => dispatch({ type: "leave" });
+      return () => { dispatch({ type: "leave" }); setConfirmEmail(""); setCode(""); setError(null); };
     }, []),
   );
 
@@ -62,7 +80,7 @@ export function CreateAccountScreen() {
       <View style={[local.layout, desktop && local.desktop]}>
         <View style={[local.introduction, desktop && local.desktopIntroduction]}>
           <Intro {...copy} />
-          <Notice>{copy.demoNotice}</Notice>
+          <Notice>{session ? "Create an account with the existing MindGuard Cognito service. Confirm the code sent to your email before signing in. Use at least 12 characters with uppercase, lowercase, a number and a symbol." : copy.demoNotice}</Notice>
           {desktop ? privacy : null}
         </View>
         <View style={local.form}>
@@ -136,7 +154,9 @@ export function CreateAccountScreen() {
             ) : null}
           </Card>
           {!desktop ? privacy : null}
-          <Button label="Create account" kind="primary" onPress={submit} />
+          {error ? <Notice error>{error}</Notice> : null}
+          {created ? <Notice>Email confirmed. You can sign in.</Notice> : null}
+          <Button label="Create account" kind="primary" disabled={working} onPress={() => void submit()} />
           <Copy center kind="muted">
             {copy.signInPrompt}
           </Copy>
@@ -147,6 +167,15 @@ export function CreateAccountScreen() {
           />
         </View>
       </View>
+      {confirmEmail && session ? <Dialog title="Confirm your account" onClose={() => { setConfirmEmail(""); setCode(""); }}>
+        <Field label="Email confirmation code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" />
+        {error ? <Notice error>{error}</Notice> : null}
+        <Button label="Confirm email" disabled={working || !code.trim()} kind="primary" onPress={() => {
+          setWorking(true); setError(null);
+          void session.confirm(confirmEmail, code).then(() => { setConfirmEmail(""); setCode(""); setCreated(true); })
+            .catch(e => setError(e instanceof Error ? e.message : "Confirmation failed.")).finally(() => setWorking(false));
+        }} />
+      </Dialog> : null}
       {state.success ? (
         <Dialog
           title={copy.successTitle}

@@ -1,5 +1,11 @@
 # Contact Alert Review (Screen 15)
 
+> Configured account mode now sends explicitly reviewed **in-app** alerts through
+> the existing AWS backend. Both accounts need Contact notifications consent and
+> the recipient must explicitly allow the sender. There is no SMS, email or push
+> delivery. See root `docs/SECURITY-INCREMENT.md`. The fixture simulation below
+> remains available only in standalone simulation/test composition.
+
 This screen is a standalone frontend simulation. Its recipient list, enabled flags,
 default message, privacy/permission notices, and success copy come from
 `packages/fixtures/security/contact-alert.json`. The default recipient and a second

@@ -12,9 +12,11 @@ import { useSavedInformation } from "../SavedInformationProvider";
 import { savedCategoryIds, savedCategoryLabels, type SavedCategoryId } from "../savedInformation";
 
 export function SavedInformationScreen() {
-  const { records, deleteCategories } = useSavedInformation();
+  const { records, deleteCategories, live, saveExamples, error } = useSavedInformation();
+  const [working, setWorking] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const { desktop } = useBrowserLayout();
-  const [selected, setSelected] = useState<readonly SavedCategoryId[]>(() => records.map((r) => r.id));
+  const [selected, setSelected] = useState<readonly SavedCategoryId[]>(() => [...savedCategoryIds]);
   const [deleting, setDeleting] = useState<readonly SavedCategoryId[] | null>(null);
   const [deleted, setDeleted] = useState(false);
   const result = useRef<ComponentRef<typeof View>>(null);
@@ -35,7 +37,7 @@ export function SavedInformationScreen() {
                 {index ? <View style={styles.divider} /> : null}
                 <InformationCheckbox label={savedCategoryLabels[id]}
                   description={exists ? copy.available : copy.unavailable}
-                  checked={exists && selected.includes(id)} disabled={!exists}
+                  checked={exists && selected.includes(id)} disabled={!exists || working}
                   onChange={() => {
                     setSelected((previous) => previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]);
                     setDeleted(false);
@@ -43,33 +45,43 @@ export function SavedInformationScreen() {
               </View>;
             })}
           </Card>
-          <Copy kind="caption">{copy.sessionNotice}</Copy>
+          <Copy kind="caption">{live ? "Only information saved to your signed-in account is listed. Deletion removes these categories from AWS, and does not delete your account, AI history, contacts or existing shares. Legacy synthetic device data stays separate." : copy.sessionNotice}</Copy>
+          {error || failure ? <Notice error>{failure ?? error}</Notice> : null}
+          {live && saveExamples ? <Button label="Save fictional examples to my account" disabled={working} onPress={() => {
+            setWorking(true); setFailure(null);
+            void saveExamples().then(() => setSelected([...savedCategoryIds])).catch(e => setFailure(e instanceof Error ? e.message : "Save not confirmed."))
+              .finally(() => setWorking(false));
+          }} /> : null}
           {!available.length ? <Notice>{records.length ? copy.noSelection : copy.empty}</Notice> : null}
-          <Button label="Export selected information" kind="primary" disabled={!available.length}
+          <Button label="Export selected information" kind="primary" disabled={!available.length || working}
             onPress={() => {
               if (!available.length) return;
               router.push({ pathname: route(13) as "/export-share", params: {
                 origin: "saved-information", categories: available.join(","),
               } });
             }} />
-          <Button label="Delete selected information" kind="danger" disabled={!available.length}
+          <Button label="Delete selected information" kind="danger" disabled={!available.length || working}
             onPress={() => { if (available.length) setDeleting([...available]); }} />
           {deleted ? <View ref={result} tabIndex={-1} accessibilityLiveRegion="polite">
-            <Notice>{copy.deleted}</Notice>
+            <Notice>{live ? "Selected categories were deleted from your account." : copy.deleted}</Notice>
           </View> : null}
           <MenuRow label="Retention and privacy choices" onPress={() => router.push(route(16))} />
         </View>
       </View>
       {deleting ? <Dialog title={copy.deleteTitle} onClose={() => setDeleting(null)}>
-        <Copy>{copy.deleteDescription}</Copy>
+        <Copy>{live ? "Delete exactly these saved categories from AWS? This cannot be undone. Other account records and existing shares remain unchanged." : copy.deleteDescription}</Copy>
         {deleting.map((id) => <Copy key={id}>{savedCategoryLabels[id]}</Copy>)}
-        <Copy kind="caption">{copy.deleteScope}</Copy>
-        <Button label="Confirm delete selected information" kind="danger" onPress={() => {
-          deleteCategories(deleting);
-          setSelected((previous) => previous.filter((id) => !deleting.includes(id)));
-          setDeleting(null);
-          setDeleted(true);
-          requestAnimationFrame(() => result.current?.focus());
+        <Copy kind="caption">{live ? "This does not delete unrelated device storage or revoke existing shares." : copy.deleteScope}</Copy>
+        {failure ? <Notice error>{failure}</Notice> : null}
+        <Button label="Confirm delete selected information" kind="danger" disabled={working} onPress={() => {
+          const ids = [...deleting];
+          setWorking(true); setFailure(null);
+          void Promise.resolve(deleteCategories(ids)).then(() => {
+            setSelected((previous) => previous.filter((id) => !ids.includes(id)));
+            setDeleting(null); setDeleted(true);
+            requestAnimationFrame(() => result.current?.focus());
+          }).catch(e => setFailure(e instanceof Error ? e.message : "Deletion outcome unknown. Refresh before retrying."))
+            .finally(() => setWorking(false));
         }} />
       </Dialog> : null}
     </Page>

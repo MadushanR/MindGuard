@@ -1,5 +1,11 @@
 # Shared Information (Screen 14)
 
+> The configured app now uses the authenticated live adapter and controlled
+> account-based in-app access, including recipient reads, persistent history,
+> status reconciliation and revocation. See `docs/SECURITY-INCREMENT.md` at the
+> repository root for the final contract. The descriptions below document the
+> preserved standalone simulation adapter, not the configured app's live mode.
+
 `SharedInformationProvider` is mounted at the app root. Its public
 `useSharedInformation` hook exports `records`, `recordShare`, `submitShare`,
 `revokeShare`, `clearShareSession`, and the demo controls `simulated`,

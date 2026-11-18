@@ -1,5 +1,13 @@
 # Munsif security and UC-10 integration assessment
 
+> Historical inspection before scope confirmation. Munsif subsequently confirmed
+> all listed security areas, account-based controlled UC-10 access, new-shares-only
+> consent withdrawal, and explicit recipient opt-in for in-app alerts. He chose to
+> keep account deletion blocked after AWS denied the needed IAM permissions.
+> Current implementation and evidence: `SECURITY-INCREMENT.md` and
+> `SECURITY-VERIFICATION.md`. The open questions below are retained as inspection
+> history, not current unresolved product requirements.
+
 Assessment date: November 17, 2026. This records the inspected baseline and open
 requirements; it does not establish completion of the backend increment.
 
