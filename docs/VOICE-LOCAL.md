@@ -18,11 +18,15 @@ aws login --profile mindguard
 .\scripts\voice-local.ps1 -Action Up
 ```
 
-Open [Talk with Zen](http://localhost:8080/voice). The web export and relay both run in Docker. A separate Expo preview server is not required. Create/confirm a voice account using your own email, or sign in to an existing one. Allow server-side voice processing, then press Start voice conversation to request the microphone. Speak naturally; subsequent turns do not need Record or Finish controls.
+Open [MindGuard](http://localhost:8080/). The web export and relay both run in Docker. A separate Expo preview server is not required. Create and confirm one MindGuard account, or sign in with your existing account. The full navigation appears after sign-in. [Support Resources](http://localhost:8080/resources) are available without signing in.
+
+You can also sign in from [Voice](http://localhost:8080/voice) or [Chat](http://localhost:8080/chat) directly. Allow voice processing, then start a voice conversation to request the microphone. Standalone chat asks separately before sending typed messages to OpenAI. The relay keeps up to three completed chat exchanges as context in memory. Live chat is absent from saved history.
+
+The existing DynamoDB table stores text consent and daily chat-session usage under separate sort keys from voice. Both modes reuse the deployed foundation and relay configuration. The relay checks text consent before requesting a reply and again before delivery, and applies the existing deterministic input and output rules. A matching input rule offers the bundled Resources screen.
 
 Health: [relay health](http://localhost:3001/api/voice/health). Configuration readiness: [relay readiness](http://localhost:3001/api/voice/ready). Health/readiness are not evidence of an authenticated microphone conversation.
 
-The web server proxies `/api/voice/*`, including WebSockets, to the relay. Both published ports are bound to PC loopback. Localhost is a browser secure context; this does not authorize exposing plain HTTP over a LAN or the internet. Future remote deployment requires HTTPS/WSS. No purchased domain is needed for this local setup.
+The web server proxies `/api/security/*` and `/api/voice/*`, including voice WebSockets, to the relay. Both published ports are bound to PC loopback. Localhost is a browser secure context; this does not authorize exposing plain HTTP over a LAN or the internet. Future remote deployment requires HTTPS/WSS. No purchased domain is needed for this local setup.
 
 ## Local credentials and policy
 

@@ -73,5 +73,27 @@ test("missing OpenAI key does not disable account and consent authentication", a
   });
   assert.equal((await fetch(base + "/consent")).status, 401);
   assert.equal((await fetch(base.replace('/voice', '/security') + '/snapshot')).status, 401);
+  assert.equal((await fetch(base + "/chat/consent")).status, 401);
+  assert.equal((await fetch(base + "/chat/sessions", { method: "POST" })).status, 503);
   assert.equal((await fetch(base + "/sessions", { method: "POST" })).status, 503);
+});
+
+test("standalone chat consent and session endpoints require a Cognito token", async (t) => {
+  const base = await startRelay(t, {
+    OPENAI_API_KEY: "synthetic-never-sent",
+    OPENAI_REALTIME_MODEL: "synthetic-model",
+    OPENAI_TRANSCRIPTION_MODEL: "synthetic-transcription",
+    COGNITO_ISSUER: "https://cognito-idp.ca-central-1.amazonaws.com/synthetic",
+    COGNITO_CLIENT_ID: "synthetic-client",
+    VOICE_TABLE: "synthetic-table",
+    ALLOWED_ORIGINS: "http://localhost:8081",
+    VOICE_POLICY_FILE: fileURLToPath(new URL("../policy.approved.json", import.meta.url)),
+    VOICE_POLICY_APPROVED: "true",
+  });
+  assert.equal((await fetch(base + "/ready")).status, 200);
+  for (const [method, path] of [["GET", "/chat/consent"], ["PUT", "/chat/consent"], ["POST", "/chat/sessions"], ["POST", "/sessions/chat-id/text"]]) {
+    const response = await fetch(base + path, { method });
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), { code: "AUTH_REQUIRED" });
+  }
 });

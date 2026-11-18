@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { router } from "expo-router";
 import { View } from "react-native";
+import { LiveAccountForm } from "../live/LiveAccountForm";
 import { useLiveVoice } from "../live/LiveVoiceProvider";
 import { voiceErrorCopy } from "../live/copy";
 import { Page } from "../../../shared/Page";
-import { Button, Card, Copy, Dialog, Field, Notice, ZenOrb } from "../../../shared/ui";
+import { Button, Copy, Dialog, Notice, ZenOrb } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { styles } from "../../../shared/theme";
 
@@ -15,10 +16,6 @@ const status = {
 };
 export function VoiceScreen() {
   const voice = useLiveVoice();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [mode, setMode] = useState<"sign-in" | "create" | "confirm">("sign-in");
   const [working, setWorking] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [consenting, setConsenting] = useState(false);
@@ -31,16 +28,6 @@ export function VoiceScreen() {
     catch (error) { setLocalError(error instanceof Error ? error.message : "VOICE_FAILED"); }
     finally { setWorking(false); }
   };
-  const authenticate = () => perform(async () => {
-    try {
-      if (mode === "create") { await voice.signUp(email, password); setMode("confirm"); }
-      else if (mode === "confirm") { await voice.confirm(email, code); setCode(""); setMode("sign-in"); }
-      else await voice.signIn(email, password);
-    } catch (error) {
-      if (error instanceof Error && error.message === "ACCOUNT_CONFIRMATION_REQUIRED") setMode("confirm");
-      throw error;
-    } finally { setPassword(""); }
-  });
   return (
     <Page>
       <Copy kind="caption">Live voice · audio and transcripts are not saved to your history</Copy>
@@ -53,19 +40,7 @@ export function VoiceScreen() {
       </View>
       {voice.update.recovered && active ? <Notice>Voice reconnected. Zen may need you to repeat earlier details.</Notice> : null}
       {!voice.signedIn ? (
-        <Card>
-          <Copy kind="heading">{mode === "confirm" ? "Confirm your voice account" : mode === "create" ? "Create your voice account" : "Sign in for voice"}</Copy>
-          <Copy kind="caption">Your capstone voice sign-in is kept only for this app session.</Copy>
-          <Field label="Voice account email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" />
-          {mode === "confirm" ? (
-            <Field label="Email confirmation code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" />
-          ) : (
-            <Field label="Voice account password" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete={mode === "create" ? "new-password" : "current-password"} />
-          )}
-          {mode === "create" ? <Copy kind="caption">Use at least 12 characters, including uppercase, lowercase, a number and a symbol.</Copy> : null}
-          <Button label={mode === "confirm" ? "Confirm email" : mode === "create" ? "Create voice account" : "Sign in to voice"} kind="primary" disabled={working || voice.busy || !email.trim() || !(mode === "confirm" ? code.trim() : password)} onPress={() => void authenticate()} />
-          <Button label={mode === "sign-in" ? "Create a voice account" : "Back to voice sign-in"} kind="text" disabled={working} onPress={() => { setMode(mode === "sign-in" ? "create" : "sign-in"); setPassword(""); setLocalError(null); }} />
-        </Card>
+        <LiveAccountForm conversation="voice" />
       ) : (
         <>
           {voice.consent === null ? <Button label="Check voice permission" onPress={() => void perform(voice.refreshConsent)} disabled={working} /> : null}
@@ -79,12 +54,12 @@ export function VoiceScreen() {
           )}
           {["speaking", "processing"].includes(state) ? <Button label="Interrupt Zen" onPress={voice.interrupt} /> : null}
           {voice.consent !== false ? <Button label="Revoke voice permission" kind="text" onPress={() => void perform(() => voice.setVoiceConsent(false))} disabled={working} /> : null}
-          <Button label="Sign out of voice" kind="text" onPress={voice.logout} />
+          <Button label="Sign out" kind="text" onPress={voice.logout} />
         </>
       )}
       {voice.update.resourceRoute ? (
         <Notice>Voice has paused. You can open Resources or switch to text.</Notice>
-      ) : (localError || voice.error || voice.update.error) ? (
+      ) : (localError || (voice.signedIn && voice.error) || voice.update.error) ? (
         <Notice error>{voiceErrorCopy(localError || voice.error || voice.update.error)}</Notice>
       ) : null}
       {voice.update.resourceRoute ? <Button label="Open Resources" icon="book" onPress={() => router.push(route(11))} /> : null}

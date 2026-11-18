@@ -83,7 +83,7 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
     setConsent(result.allowed);
     saveLocalConsent("voice", result.allowed);
   }, [headers, saveLocalConsent]);
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string, purpose: "voice" | "chat" = "voice") => {
     if (shared) return shared.signIn(email, password);
     const requestRevision = ++revision.current;
     setBusy(true);
@@ -94,13 +94,26 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
       access.current = identity;
       setSignedIn(true);
       setExpiresAt(identity.expiresAt);
-      await refreshConsent();
+      if (purpose === "voice") await refreshConsent();
     } catch (cause) {
       if (requestRevision !== revision.current) return;
       setError(cause instanceof Error ? cause.message : "VOICE_SIGN_IN_FAILED");
       throw cause;
     } finally { if (requestRevision === revision.current) setBusy(false); }
   }, [refreshConsent, shared]);
+  const requestChat = useCallback(async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
+    const identity = access.current;
+    const response = await fetch(`${voiceRelayUrl()}/api/voice${path}`, {
+      ...options,
+      headers: headers(),
+      signal: options.signal ?? AbortSignal.timeout(10000),
+    });
+    if (identity !== access.current) throw new Error("AUTH_EXPIRED");
+    if (response.status === 204) return undefined as T;
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.code ?? "TEXT_REPLY_UNAVAILABLE");
+    return result as T;
+  }, [headers]);
   const setVoiceConsent = useCallback(async (allowed: boolean) => {
     const identity = access.current;
     if (!allowed) { stop(); clearHandoff(); setConsent(false); saveLocalConsent("voice", false); }
@@ -223,7 +236,18 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
     previousPath.current = path;
     if (previous === "/voice" && path !== "/voice") stop();
     if (!["/voice", "/chat"].includes(path)) clearHandoff();
-    if (!shared && ["/sign-in", "/create-account", "/account-recovery", "/"].includes(path) && previous !== path) logout();
+    if (previous === path) return;
+    const leftWebSignIn = Platform.OS === "web" && ["/sign-in", "/chat", "/voice"].includes(previous);
+    if (shared) {
+      if (leftWebSignIn && !shared.identity && shared.busy) shared.logout();
+      return;
+    }
+    if (Platform.OS === "web") {
+      // Leaving a web sign-in form cancels any in-flight sign-in for that screen.
+      if (!access.current && leftWebSignIn) logout();
+    } else if (["/sign-in", "/create-account", "/account-recovery", "/"].includes(path)) {
+      logout();
+    }
   }, [path, stop, clearHandoff, logout, shared]);
   /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -240,7 +264,7 @@ function useVoiceProduct(identityPort?: VoiceIdentityPort) {
   return { signedIn, busy, error, consent, update, handoff, textMode, start, stop, logout, signIn,
     signUp: (email: string, password: string) => shared ? shared.signUp(email, password) : auth.current.signUp(email, password),
     confirm: (email: string, code: string) => shared ? shared.confirm(email, code) : auth.current.confirm(email, code),
-    refreshConsent, setVoiceConsent, switchToText, sendText, clearHandoff,
+    refreshConsent, setVoiceConsent, switchToText, sendText, clearHandoff, requestChat,
     mute: (muted: boolean) => controller.current?.setMuted(muted),
     interrupt: () => controller.current?.interrupt(),
   };

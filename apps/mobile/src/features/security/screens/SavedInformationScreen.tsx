@@ -6,12 +6,13 @@ import { Page } from "../../../shared/Page";
 import { Button, Card, Copy, Dialog, MenuRow, Notice } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
-import { styles } from "../../../shared/theme";
+import { useTheme } from "../../../shared/theme";
 import { InformationCheckbox } from "../InformationCheckbox";
 import { useSavedInformation } from "../SavedInformationProvider";
 import { savedCategoryIds, savedCategoryLabels, type SavedCategoryId } from "../savedInformation";
 
 export function SavedInformationScreen() {
+  const { styles } = useTheme();
   const { records, deleteCategories, live, saveExamples, error } = useSavedInformation();
   const [working, setWorking] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);

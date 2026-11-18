@@ -17,27 +17,28 @@ import {
 import { SvgXml } from "react-native-svg";
 import type { Emotion } from "@mindguard/contracts";
 import { useAI } from "../features/ai/AIProvider";
-import { colors, emotionColors, styles } from "./theme";
+import { createThemedStyles, useTheme } from "./theme";
 import icons from "./icons.json";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBrowserLayout } from "./responsive";
 export type IconName = keyof typeof icons;
 export function Icon({
   name,
-  color = colors.teal,
+  color,
   size = 21,
 }: {
   name: IconName;
   color?: string;
   size?: number;
 }) {
+  const { colors } = useTheme();
   return (
     <View
       accessible={false}
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
     >
-      <SvgXml xml={icons[name]} width={size} height={size} color={color} />
+      <SvgXml xml={icons[name]} width={size} height={size} color={color ?? colors.teal} />
     </View>
   );
 }
@@ -49,6 +50,7 @@ export function Copy({
   kind?: "body" | "muted" | "caption" | "eyebrow" | "heading" | "title";
   center?: boolean;
 }>) {
+  const { styles } = useTheme();
   const { model } = useAI();
   return (
     <Text
@@ -87,6 +89,8 @@ export function Button({
   disabled?: boolean;
   selected?: boolean;
 }) {
+  const { colors, mode } = useTheme();
+  const local = componentStyles[mode];
   const [focus, setFocus] = useState(false),
     { model } = useAI();
   const foreground =
@@ -149,6 +153,7 @@ export function Card({
   children,
   soft = false,
 }: PropsWithChildren<{ soft?: boolean }>) {
+  const { styles } = useTheme();
   return <View style={[styles.card, soft && styles.soft]}>{children}</View>;
 }
 export function Intro({
@@ -169,6 +174,7 @@ export function Intro({
   );
 }
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
+  const { colors, styles } = useTheme();
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 8 }}>
@@ -202,8 +208,9 @@ export function Toggle({
   onChange(value: boolean): void;
   disabled?: boolean;
 }) {
+  const { colors, mode } = useTheme();
   return (
-    <View style={local.toggle}>
+    <View style={componentStyles[mode].toggle}>
       <View style={{ flex: 1, gap: 4 }}>
         <Copy>{label}</Copy>
         {description ? <Copy kind="caption">{description}</Copy> : null}
@@ -214,7 +221,7 @@ export function Toggle({
         onValueChange={onChange}
         disabled={disabled}
         trackColor={{ false: colors["field-border"], true: colors.teal }}
-        thumbColor={colors.card}
+        thumbColor={colors["switch-thumb"]}
       />
     </View>
   );
@@ -223,12 +230,16 @@ export function Notice({
   children,
   error = false,
 }: PropsWithChildren<{ error?: boolean }>) {
+  const { colors, mode } = useTheme();
   return (
     <View
       accessibilityLiveRegion={error ? "assertive" : "polite"}
       style={[
-        local.notice,
-        error && { backgroundColor: "#FFF2E9", borderColor: "#E6C4B1" },
+        componentStyles[mode].notice,
+        error && {
+          backgroundColor: colors["error-background"],
+          borderColor: colors["error-border"],
+        },
       ]}
     >
       <Icon name={error ? "alert" : "leaf"} />
@@ -251,6 +262,7 @@ export function MenuRow({
   icon?: IconName;
   selected?: boolean;
 }) {
+  const { colors, mode } = useTheme();
   const [focused, setFocused] = useState(false);
   return (
     <Pressable
@@ -261,7 +273,7 @@ export function MenuRow({
       onBlur={() => setFocused(false)}
       onPress={onPress}
       style={({ pressed }) => [
-        local.menu,
+        componentStyles[mode].menu,
         pressed && { backgroundColor: colors.sage },
         focused && { outlineColor: colors.focus, outlineWidth: 2 },
       ]}
@@ -280,6 +292,8 @@ export function Dialog({
   onClose,
   visible = true,
 }: PropsWithChildren<{ title: string; onClose(): void; visible?: boolean }>) {
+  const { mode } = useTheme();
+  const local = componentStyles[mode];
   const insets = useSafeAreaInsets();
   const { desktop } = useBrowserLayout();
   return (
@@ -325,6 +339,7 @@ export function EmotionBadge({
   label: Emotion;
   status: string;
 }) {
+  const { emotionColors } = useTheme();
   const c = emotionColors[label.toLowerCase() as keyof typeof emotionColors];
   return (
     <View
@@ -349,6 +364,7 @@ export function ZenOrb({
   state?: string;
   compact?: boolean;
 }) {
+  const { colors } = useTheme();
   const { model } = useAI(),
     [systemReduced, setSystemReduced] = useState(true),
     [phase] = useState(() => new Animated.Value(0));
@@ -433,11 +449,11 @@ export function ZenOrb({
             width: size * 0.82,
             height: size * 0.82,
             borderRadius: size,
-            backgroundColor: "#B5C9A4",
+            backgroundColor: colors["orb-middle"],
             alignItems: "center",
             justifyContent: "center",
             borderWidth: compact ? 0 : 8,
-            borderColor: "#D7E2C9",
+            borderColor: colors["orb-border"],
           }}
         >
           <View
@@ -445,7 +461,7 @@ export function ZenOrb({
               width: size * 0.58,
               height: size * 0.58,
               borderRadius: size,
-              backgroundColor: "#CCDBBB",
+              backgroundColor: colors["orb-center"],
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -457,7 +473,7 @@ export function ZenOrb({
     </View>
   );
 }
-const local = StyleSheet.create({
+const componentStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   button: {
     minHeight: 49,
     paddingVertical: 13,
@@ -499,7 +515,7 @@ const local = StyleSheet.create({
   },
   mask: {
     flex: 1,
-    backgroundColor: "rgba(26,48,39,0.35)",
+    backgroundColor: colors.scrim,
     alignItems: "center",
     justifyContent: "center",
     padding: 18,
@@ -512,4 +528,4 @@ const local = StyleSheet.create({
     backgroundColor: colors.card,
     overflow: "hidden",
   },
-});
+}));

@@ -8,7 +8,7 @@ import { Page } from "../../../shared/Page";
 import { Button, Copy, MenuRow, Notice, Toggle } from "../../../shared/ui";
 import { route } from "../../../shared/navigation";
 import { useBrowserLayout } from "../../../shared/responsive";
-import { styles } from "../../../shared/theme";
+import { useTheme } from "../../../shared/theme";
 import {
   changePrivacyDraft, parseDemoPreferences, PRIVACY_STORAGE_KEY,
   serializeDemoPreferences, type PrivacyDraft,
@@ -17,14 +17,16 @@ import { useSecuritySessionOptional } from "../SecuritySessionProvider";
 import { useLiveVoiceOptional } from "../../ai/live/LiveVoiceProvider";
 
 export function PrivacyConsentScreen() {
+  const { styles } = useTheme();
   const ai = useAI();
   const session = useSecuritySessionOptional();
+  const signedOut = !!session && !session.identity;
   const voice = useLiveVoiceOptional();
   const account = useRef(session);
   useEffect(() => { account.current = session; }, [session]);
   const currentAI = useRef(ai);
   useEffect(() => { currentAI.current = ai; }, [ai]);
-  const { desktop } = useBrowserLayout();
+  const { browser, desktop } = useBrowserLayout();
   const [draft, setDraft] = useState<PrivacyDraft | null>(null);
   const [readError, setReadError] = useState(false);
   const [writeError, setWriteError] = useState(false);
@@ -41,6 +43,7 @@ export function PrivacyConsentScreen() {
     setWriteError(false);
     setSubmitted(false);
     setSaving(busy.current);
+    if (signedOut) return;
     if (ai.ready) {
       if (account.current) {
         void account.current.refresh().then(value => {
@@ -58,7 +61,7 @@ export function PrivacyConsentScreen() {
         if (focused.current && generation === readGeneration.current) setReadError(true);
       });
     }
-  }, [ai.ready, voice?.consent]);
+  }, [ai.ready, signedOut, voice?.consent]);
   useFocusEffect(useCallback(() => {
     focused.current = true;
     load();
@@ -108,7 +111,12 @@ export function PrivacyConsentScreen() {
           <Copy kind="muted">{copy.description}</Copy>
           <Copy kind="caption">{copy.draftNotice}</Copy>
         </View>
-        <View style={[local.form, desktop && local.column]}>
+        {signedOut ? (
+          <View style={[local.form, desktop && local.column]}>
+            <Notice>Sign in to manage your privacy preferences.</Notice>
+            <MenuRow label="Back to create account" onPress={() => router.canGoBack() ? router.back() : router.replace(route(2))} />
+          </View>
+        ) : <View style={[local.form, desktop && local.column]}>
           {!ai.ready ? <Notice>Loading existing AI permissions…</Notice> : null}
           {readError ? <>
             <Notice error>{copy.readError}</Notice>
@@ -138,10 +146,10 @@ export function PrivacyConsentScreen() {
           </Notice> : null}
           <Button label="Save preferences" kind="primary" disabled={!draft || locked || !ai.ready}
             onPress={() => { void save(); }} />
-          <MenuRow label="Back to create account" onPress={() => router.push(route(2))} />
+          {!browser ? <MenuRow label="Back to create account" onPress={() => router.push(route(2))} /> : null}
           <MenuRow label="Saved information" onPress={() => router.push(route(17))} />
           <MenuRow label="Conversation history and auto-delete" onPress={() => router.push(route(23))} />
-        </View>
+        </View>}
       </View>
     </Page>
   );

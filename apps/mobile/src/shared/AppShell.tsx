@@ -9,14 +9,16 @@ import {
   View,
 } from "react-native";
 import { router, usePathname } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { demoScenarios, fixtureErrors, screenCopy } from "@mindguard/fixtures";
 import { useAI } from "../features/ai/AIProvider";
+import { useSecuritySession } from "../features/security/SecuritySessionProvider";
 import { destinations, route } from "./navigation";
-import { colors, styles } from "./theme";
+import { createThemedStyles, useTheme } from "./theme";
 import {
   Button,
   Card,
@@ -35,9 +37,15 @@ import { useWellness } from "../features/wellness/state";
 import { useSharedInformation } from "../features/security";
 
 export function AppShell({ children }: PropsWithChildren) {
+  const { colors, mode, setMode } = useTheme();
+  const shell = shellStyles[mode];
+  const nextMode = mode === "light" ? "dark" : "light";
+  const modeLabel = nextMode === "dark" ? "Dark" : "Light";
   const { clearShareSession } = useSharedInformation();
   const wellness = useWellness();
   const { desktop, browser } = useBrowserLayout();
+  const { identity } = useSecuritySession();
+  const signedIn = !!identity;
   const insets = useSafeAreaInsets();
   const ai = useAI(),
     path = usePathname(),
@@ -46,12 +54,18 @@ export function AppShell({ children }: PropsWithChildren) {
     [scenario, setScenario] = useState<string | null>(null),
     [reset, setReset] = useState(false);
   const focused = path === "/voice",
-    signedOut = [
+    accountPage = [
       "/",
       "/create-account",
       "/sign-in",
       "/account-recovery",
     ].includes(path);
+  const showNavigation = browser ? signedIn && !accountPage : !accountPage;
+  const showReview = __DEV__ && !browser;
+  const webResources = browser && path === "/resources";
+  const publicPage = webResources || (browser && !signedIn);
+  const showPage = publicPage || (ai.ready && !fixtureErrors.length);
+  const showBrand = publicPage || ["/", "/home", "/for-you", "/trends", "/chat"].includes(path);
   const { leave, stopVoice } = ai;
   useEffect(() => {
     const before = previous.current;
@@ -72,10 +86,15 @@ export function AppShell({ children }: PropsWithChildren) {
     setScenario(null);
     setReset(false);
   };
-  const headerButton = (label: string, icon: IconName, action: () => void) => (
+  const headerButton = (
+    label: string,
+    icon: IconName,
+    action: () => void,
+    accessibilityLabel = label,
+  ) => (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
       onPress={action}
       style={({ pressed }) => [
         shell.headerAction,
@@ -93,6 +112,7 @@ export function AppShell({ children }: PropsWithChildren) {
   );
   return (
     <View style={shell.stage}>
+      <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <SafeAreaView
         style={[
           shell.frame,
@@ -101,7 +121,7 @@ export function AppShell({ children }: PropsWithChildren) {
         ]}
         edges={["top", "bottom"]}
       >
-        {desktop && !signedOut ? <DesktopNavigation path={path} /> : null}
+        {desktop && showNavigation ? <DesktopNavigation path={path} /> : null}
         <KeyboardAvoidingView
           style={{ flex: 1, minWidth: 0 }}
           behavior={
@@ -122,7 +142,7 @@ export function AppShell({ children }: PropsWithChildren) {
                 gap: 8,
               }}
             >
-              {desktop && !signedOut ? (
+              {desktop && showNavigation ? (
                 <>
                   {headerButton("Back", "back", back)}
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -132,14 +152,12 @@ export function AppShell({ children }: PropsWithChildren) {
                     </Copy>
                   </View>
                 </>
-              ) : ["/", "/home", "/for-you", "/trends", "/chat"].includes(
-                  path,
-                ) ? (
+              ) : showBrand ? (
                 <>
                   <View style={shell.brand}>
-                    <Icon name="leaf" color={colors.card} size={19} />
+                    <Icon name="leaf" color={colors["brand-mark"]} size={19} />
                   </View>
-                  <Text style={shell.brandText}>MindGuard</Text>
+                  <Text numberOfLines={1} style={shell.brandText}>MindGuard</Text>
                 </>
               ) : (
                 <>
@@ -150,17 +168,33 @@ export function AppShell({ children }: PropsWithChildren) {
                 </>
               )}
             </View>
-            {headerButton("Resources", "book", () => router.push(route(11)))}
-            {!signedOut
+            {!webResources
+              ? headerButton(
+                  desktop ? "Support Resources" : "Resources",
+                  "book",
+                  () => router.push(route(11)),
+                  browser ? "Support Resources" : "Resources",
+                )
+              : null}
+            {webResources && !signedIn
+              ? headerButton("Sign in", "lock", () => router.push(route(3)))
+              : null}
+            {showNavigation
               ? headerButton("Settings", "settings", () =>
                   router.push(route(18)),
                 )
               : null}
-            {__DEV__
+            {showReview
               ? headerButton("Explore", "spark", () => setReview(true))
               : null}
+            {headerButton(
+              desktop ? `${modeLabel} mode` : modeLabel,
+              nextMode === "dark" ? "moon" : "sun",
+              () => setMode(nextMode),
+              `Switch to ${nextMode} mode`,
+            )}
           </View>
-          {fixtureErrors.length ? (
+          {!publicPage && fixtureErrors.length ? (
             <ScrollView contentContainerStyle={{ padding: 26, gap: 16 }}>
               <Copy kind="heading">
                 {screenCopy?.common?.fixtureError ??
@@ -170,7 +204,7 @@ export function AppShell({ children }: PropsWithChildren) {
                 <Copy key={i}>{error}</Copy>
               ))}
             </ScrollView>
-          ) : !ai.ready ? (
+          ) : !publicPage && !ai.ready ? (
             <View style={{ padding: 26, gap: 16 }}>
               <Copy>
                 {ai.readError
@@ -184,27 +218,27 @@ export function AppShell({ children }: PropsWithChildren) {
                     label="Retry opening saved data"
                     onPress={() => void ai.restore()}
                   />
-                  <Button
+                  {showReview ? <Button
                     label="Reset local demo data"
                     kind="danger"
                     onPress={() => {
                       setReview(true);
                       setReset(true);
                     }}
-                  />
+                  /> : null}
                 </>
               ) : null}
             </View>
           ) : null}
-              {ai.ready && !fixtureErrors.length && ai.writeError ? (
+              {!publicPage && showPage && ai.writeError ? (
                 <View style={{ padding: 12, gap: 8 }}>
                   <Notice error>{screenCopy.common.storageWriteError}</Notice>
                   <Button label="Retry saving" onPress={ai.retryStorage} />
                 </View>
               ) : null}
               {/* Keep Expo's navigator mounted while an account cache loads. */}
-              <View style={{ flex: 1, minHeight: 0, display: ai.ready && !fixtureErrors.length ? "flex" : "none" }}>{children}</View>
-              {ai.ready && !fixtureErrors.length && !desktop && !signedOut && !focused ? (
+              <View style={{ flex: 1, minHeight: 0, display: showPage ? "flex" : "none" }}>{children}</View>
+              {showPage && !desktop && showNavigation && !focused ? (
                 <View style={shell.nav}>
                   {(
                     [
@@ -236,7 +270,7 @@ export function AppShell({ children }: PropsWithChildren) {
                   ))}
                 </View>
               ) : null}
-          {review && __DEV__ ? (
+          {review && showReview ? (
             <Dialog
               title={
                 reset
@@ -375,8 +409,8 @@ export function AppShell({ children }: PropsWithChildren) {
     </View>
   );
 }
-const shell = StyleSheet.create({
-  stage: { flex: 1, backgroundColor: "#E6E9DF", alignItems: "center" },
+const shellStyles = createThemedStyles(({ colors, styles }) => StyleSheet.create({
+  stage: { flex: 1, backgroundColor: colors.stage, alignItems: "center" },
   frame: {
     flex: 1,
     width: "100%",
@@ -408,6 +442,7 @@ const shell = StyleSheet.create({
   },
   brandText: {
     ...styles.body,
+    flexShrink: 1,
     fontWeight: "600",
     fontSize: 17,
     letterSpacing: -0.6,
@@ -438,4 +473,4 @@ const shell = StyleSheet.create({
     gap: 4,
   },
   navIcon: { borderRadius: 20, paddingVertical: 4, paddingHorizontal: 16 },
-});
+}));

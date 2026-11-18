@@ -13,6 +13,11 @@ export interface Principal {
   expiresAt: number;
   email?: string;
 }
+export const processingDisclosure = {
+  voice: "voice-processing-v1",
+  chat: "text-processing-v1",
+} as const;
+type ProcessingPurpose = keyof typeof processingDisclosure;
 export class CognitoVoiceAccess {
   private db = DynamoDBDocumentClient.from(new DynamoDBClient({}));
   private keys;
@@ -71,47 +76,47 @@ export class CognitoVoiceAccess {
     }
     return result;
   }
-  async consent(owner: string) {
+  async consent(owner: string, purpose: ProcessingPurpose = "voice") {
     const account = await this.db.send(new GetCommand({ TableName: this.table,
       Key: { pk: `USER#${owner}`, sk: "SECURITY_V1" }, ConsistentRead: true }));
     if (account.Item?.document?.status && account.Item.document.status !== "active") return false;
     const result = await this.db.send(
       new GetCommand({
         TableName: this.table,
-        Key: { pk: `USER#${owner}`, sk: "VOICE_CONSENT" },
+        Key: { pk: `USER#${owner}`, sk: purpose === "chat" ? "TEXT_CONSENT" : "VOICE_CONSENT" },
         ConsistentRead: true,
       }),
     );
     return (
       result.Item?.allowed === true &&
-      result.Item?.disclosure === "voice-processing-v1"
+      result.Item?.disclosure === processingDisclosure[purpose]
     );
   }
-  async setConsent(owner: string, allowed: boolean) {
+  async setConsent(owner: string, allowed: boolean, purpose: ProcessingPurpose = "voice") {
     await this.db.send(
       new PutCommand({
         TableName: this.table,
         Item: {
           pk: `USER#${owner}`,
-          sk: "VOICE_CONSENT",
+          sk: purpose === "chat" ? "TEXT_CONSENT" : "VOICE_CONSENT",
           allowed,
-          disclosure: "voice-processing-v1",
+          disclosure: processingDisclosure[purpose],
           updatedAt: new Date().toISOString(),
         },
       }),
     );
   }
-  async check(owner: string, expiresAt: number) {
+  async check(owner: string, expiresAt: number, purpose: ProcessingPurpose = "voice") {
     if (Date.now() >= expiresAt) throw new VoiceError("AUTH_EXPIRED");
-    if (!(await this.consent(owner))) throw new VoiceError("CONSENT_REQUIRED");
+    if (!(await this.consent(owner, purpose))) throw new VoiceError("CONSENT_REQUIRED");
   }
-  async reserveSession(owner: string, dailyLimit: number) {
+  async reserveSession(owner: string, dailyLimit: number, purpose: ProcessingPurpose = "voice") {
     const date = new Date().toISOString().slice(0, 10);
     try {
       await this.db.send(
         new UpdateCommand({
           TableName: this.table,
-          Key: { pk: `USER#${owner}`, sk: `VOICE_USAGE#${date}` },
+          Key: { pk: `USER#${owner}`, sk: `${purpose === "chat" ? "TEXT_USAGE" : "VOICE_USAGE"}#${date}` },
           UpdateExpression: "SET #ttl = :ttl ADD #count :one",
           ConditionExpression:
             "attribute_not_exists(#count) OR #count < :limit",
